@@ -1,0 +1,13 @@
+{
+  "name": "allenlim-url-worker",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "eleventy",
+    "dev": "eleventy --serve",
+    "publish": "eleventy && wrangler publish --site ./public"
+  },
+  "devDependencies": {
+    "@11ty/eleventy": "^2.0.0"
+  }
+}
