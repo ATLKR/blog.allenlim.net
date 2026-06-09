@@ -1,15 +1,15 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "allenlim-url-worker",
+	"name": "allenlim-blog",
 	"main": "./src/worker.ts",
+	"account_id": "9f9fdfcfb6371183304908c2de94513d",
 	"compatibility_date": "2026-02-24",
 	"compatibility_flags": ["nodejs_compat"],
 	"d1_databases": [
 		{
 			"binding": "DB",
 			"database_name": "allenlim-blog",
-			// Run `wrangler d1 create allenlim-blog` and paste the real ID here for deploy
-			"database_id": "local",
+			"database_id": "1b565582-ec08-4bdb-b07d-2404e259c48a",
 		},
 	],
 	"r2_buckets": [
@@ -18,6 +18,17 @@
 			"bucket_name": "allenlim-blog-media",
 		},
 	],
+	// Astro sessions (Cloudflare KV) — binding name must be SESSION
+	"kv_namespaces": [
+		{
+			"binding": "SESSION",
+			"id": "e7fcd112525342feb73c159d3f61e9a8",
+		},
+	],
+	// Cloudflare Images binding for @astrojs/cloudflare image service
+	"images": {
+		"binding": "IMAGES",
+	},
 	// Worker Loader for plugin sandboxing
 	"worker_loaders": [
 		{
