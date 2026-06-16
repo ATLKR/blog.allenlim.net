@@ -196,6 +196,10 @@ const isLoggedIn = !!Astro.locals.user;
 				<div class="footer-bottom">
 					<p class="footer-copyright">
 						Powered by <a href="https://emdashcms.com">EmDash</a>
+						<span class="footer-sep" aria-hidden="true">·</span>
+						<a href="/_emdash/admin" class="footer-admin">
+							{isLoggedIn ? "Admin" : "Log in"}
+						</a>
 					</p>
 					<div class="theme-switcher">
 						<button
@@ -866,6 +870,21 @@ const isLoggedIn = !!Astro.locals.user;
 
 			.footer-copyright a {
 				color: var(--color-text-secondary);
+			}
+
+			.footer-sep {
+				margin: 0 var(--spacing-2);
+				color: var(--color-border);
+			}
+
+			.footer-admin {
+				color: var(--color-muted);
+				text-decoration: none;
+			}
+
+			.footer-admin:hover {
+				color: var(--color-text-secondary);
+				text-decoration: underline;
 			}
 
 			/* Theme switcher */
