@@ -16,6 +16,9 @@ export default defineConfig({
 	integrations: [
 		react(),
 		emdash({
+			// Pin the public origin to https so auth/CSRF/WebAuthn origin checks
+			// never fall back to an http-derived origin behind the CF proxy.
+			siteUrl: "https://blog.allenlim.net",
 			database: d1({ binding: "DB", session: "auto" }),
 			storage: r2({ binding: "MEDIA" }),
 			plugins: [formsPlugin()],
