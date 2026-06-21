@@ -298,5 +298,13 @@ export async function listTerms(env: Env, kind: "tags" | "categories"): Promise<
 	return results ?? [];
 }
 
+/** Published pages for the nav bar (lightweight: slug + title only). */
+export async function listNavPages(env: Env): Promise<Array<{ slug: string; title: string }>> {
+	const { results } = await env.DB.prepare(
+		`SELECT slug, title FROM posts WHERE type = 'page' AND ${PUBLIC_LIVE} ORDER BY title`,
+	).all<{ slug: string; title: string }>();
+	return results ?? [];
+}
+
 const dedupe = (a: string[]) => [...new Set(a.map((s) => slugify(s)).filter(Boolean))];
 const labelize = (slug: string) => slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());

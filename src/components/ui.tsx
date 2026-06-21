@@ -34,6 +34,7 @@ export interface Me {
 	user: { id: string; email: string; name: string | null; role: string } | null;
 	identity: { title: string; tagline: string };
 	needsSetup?: boolean;
+	navPages?: Array<{ slug: string; title: string }>;
 }
 
 export function fmtDate(value?: string | null) {
@@ -86,6 +87,9 @@ export function SiteLayout({ me, children }: { me: Me; children: React.ReactNode
 						</form>
 						<div className="nav-links">
 							<Link to="/posts" search={{}}>Posts</Link>
+							{(me.navPages ?? []).map((p) => (
+								<Link key={p.slug} to="/$slug" params={{ slug: p.slug }}>{p.title}</Link>
+							))}
 							<Link to="/tags">Tags</Link>
 							{me.user && <Link to="/admin" className="nav-admin">Admin</Link>}
 						</div>

@@ -30,6 +30,7 @@ import {
 	getPrevNext,
 	getTerm,
 	isReachable,
+	listNavPages,
 	listPosts,
 	listTerms,
 	loadBody,
@@ -70,12 +71,13 @@ async function requireUser(): Promise<SessionUser> {
 
 export const meFn = createServerFn({ method: "GET" }).handler(async () => {
 	const env = getEnv();
-	const [user, identity, needsSetup] = await Promise.all([
+	const [user, identity, needsSetup, navPages] = await Promise.all([
 		currentUser(),
 		getSiteIdentity(env),
 		countUsers(env).then((n) => n === 0),
+		listNavPages(env),
 	]);
-	return { user, identity, needsSetup };
+	return { user, identity, needsSetup, navPages };
 });
 
 export const setupFn = createServerFn({ method: "POST" })
