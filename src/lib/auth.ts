@@ -8,7 +8,8 @@ export interface SessionUser {
 	role: string;
 }
 
-const PBKDF2_ITERATIONS = 150_000;
+// Cloudflare Workers' WebCrypto caps PBKDF2 at 100,000 iterations.
+const PBKDF2_ITERATIONS = 100_000;
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
 export const SESSION_COOKIE = "sid";
 
