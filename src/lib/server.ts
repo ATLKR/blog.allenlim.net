@@ -1,5 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getCookie, setCookie } from "@tanstack/react-start/server";
+import { getCookie, getRequestIP, setCookie } from "@tanstack/react-start/server";
+import {
+	checkRate,
+	deleteComment,
+	hashIp,
+	insertComment,
+	listAllComments,
+	listComments,
+	setCommentStatus,
+	verifyTurnstile,
+} from "./comments";
 import {
 	type SessionUser,
 	SESSION_COOKIE,
@@ -228,6 +238,68 @@ export const deleteFn = createServerFn({ method: "POST" })
 	.handler(async ({ data }) => {
 		await requireUser();
 		await deletePost(getEnv(), data.id);
+		return { ok: true };
+	});
+
+// --- comments ---
+
+export const listCommentsFn = createServerFn({ method: "GET" })
+	.validator((d: { postId: string }) => d)
+	.handler(async ({ data }) => {
+		const env = getEnv();
+		const [comments, user] = await Promise.all([listComments(env, data.postId), currentUser()]);
+		return {
+			comments,
+			siteKey: env.TURNSTILE_SITEKEY ?? "",
+			member: user ? { name: user.name || user.email } : null,
+		};
+	});
+
+export const addCommentFn = createServerFn({ method: "POST" })
+	.validator((d: { postId: string; name: string; email?: string; body: string; token: string }) => d)
+	.handler(async ({ data }) => {
+		const env = getEnv();
+		const user = await currentUser();
+		const post = await getPostMetaById(env, data.postId);
+		if (!post || !isReachable(post, !!user)) return { ok: false, error: "Post not found." };
+
+		const name = (user ? user.name || user.email : data.name || "").trim().slice(0, 80);
+		const body = (data.body || "").trim();
+		if (!name) return { ok: false, error: "Name is required." };
+		if (body.length < 2) return { ok: false, error: "Comment is too short." };
+		if (body.length > 5000) return { ok: false, error: "Comment is too long." };
+
+		if (!user) {
+			const ip = getRequestIP({ xForwardedFor: true }) ?? "0.0.0.0";
+			const ipHash = await hashIp(ip);
+			if (!(await checkRate(env, ipHash))) return { ok: false, error: "Too many comments — please wait a minute." };
+			if (!data.token || !(await verifyTurnstile(env, data.token, ip)))
+				return { ok: false, error: "Captcha verification failed. Please try again." };
+			const comment = await insertComment(env, { postId: data.postId, authorName: name, email: data.email || null, body, ipHash });
+			return { ok: true, comment };
+		}
+		const comment = await insertComment(env, { postId: data.postId, authorName: name, body, userId: user.id });
+		return { ok: true, comment };
+	});
+
+export const adminCommentsFn = createServerFn({ method: "GET" }).handler(async () => {
+	await requireUser();
+	return { comments: await listAllComments(getEnv(), 200) };
+});
+
+export const commentStatusFn = createServerFn({ method: "POST" })
+	.validator((d: { id: string; status: "published" | "hidden" | "spam" }) => d)
+	.handler(async ({ data }) => {
+		await requireUser();
+		await setCommentStatus(getEnv(), data.id, data.status);
+		return { ok: true };
+	});
+
+export const deleteCommentFn = createServerFn({ method: "POST" })
+	.validator((d: { id: string }) => d)
+	.handler(async ({ data }) => {
+		await requireUser();
+		await deleteComment(getEnv(), data.id);
 		return { ok: true };
 	});
 

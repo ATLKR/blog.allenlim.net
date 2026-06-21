@@ -17,7 +17,9 @@ holds only metadata so the 10 GB limit never bites.
 - Full-text search (D1 FTS5, trigram — works for Korean + English)
 - Pinned posts, cover images, scheduled publishing (future publish date)
 - Reading time, table of contents, prev/next, related posts
-- Admin: first-run setup, login, dashboard, markdown editor
+- Comments with Cloudflare Turnstile + KV rate-limiting (guest now,
+  member-ready schema), moderated from the admin
+- Admin: first-run setup, login, dashboard, markdown editor, comment moderation
 - Light/dark theme, server-rendered on Cloudflare Workers
 
 ## Stack
