@@ -2,6 +2,34 @@ import { Link } from "@tanstack/react-router";
 import { useEffect } from "react";
 import type { PostWithTerms } from "#/lib/content";
 
+export const SITE = "allenlim.net";
+
+/** Builds a `head()` meta array: title + optional OG/description tags. */
+export function pageHead(opts: { title: string; description?: string | null; image?: string | null; type?: "website" | "article"; robots?: string | null }) {
+	const meta: Array<Record<string, string>> = [
+		{ title: opts.title },
+		{ property: "og:title", content: opts.title },
+		{ property: "og:type", content: opts.type ?? "website" },
+	];
+	if (opts.description) {
+		meta.push({ name: "description", content: opts.description });
+		meta.push({ property: "og:description", content: opts.description });
+	}
+	if (opts.image) meta.push({ property: "og:image", content: opts.image });
+	if (opts.robots) meta.push({ name: "robots", content: opts.robots });
+	return { meta };
+}
+
+/** Runs highlight.js over rendered markdown after mount. */
+export function useHighlight(dep: unknown) {
+	useEffect(() => {
+		const run = () => (window as unknown as { hljs?: { highlightAll: () => void } }).hljs?.highlightAll();
+		run();
+		const t = setTimeout(run, 300); // in case the CDN script loads slightly later
+		return () => clearTimeout(t);
+	}, [dep]);
+}
+
 export interface Me {
 	user: { id: string; email: string; name: string | null; role: string } | null;
 	identity: { title: string; tagline: string };

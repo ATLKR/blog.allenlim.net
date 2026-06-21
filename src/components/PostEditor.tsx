@@ -1,7 +1,15 @@
 import { useRouter } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { PostWithTerms } from "#/lib/content";
 import { deleteFn, saveFn } from "#/lib/server";
+
+async function uploadFile(file: File): Promise<{ url: string; markdown: string } | null> {
+	const fd = new FormData();
+	fd.append("file", file);
+	const res = await fetch("/api/media", { method: "POST", body: fd });
+	if (!res.ok) return null;
+	return res.json();
+}
 
 const VIS = ["draft", "private", "unlisted", "public"] as const;
 
@@ -22,6 +30,27 @@ export function PostEditor({ existing, body: initialBody }: { existing?: PostWit
 	});
 	const [msg, setMsg] = useState<string | null>(null);
 	const [saving, setSaving] = useState(false);
+	const coverInput = useRef<HTMLInputElement>(null);
+	const bodyInput = useRef<HTMLInputElement>(null);
+
+	async function onCoverFile(e: React.ChangeEvent<HTMLInputElement>) {
+		const file = e.target.files?.[0];
+		if (!file) return;
+		setMsg("Uploading cover…");
+		const r = await uploadFile(file);
+		setMsg(r ? null : "Upload failed.");
+		if (r) setF((p) => ({ ...p, cover_url: r.url }));
+		e.target.value = "";
+	}
+	async function onBodyFile(e: React.ChangeEvent<HTMLInputElement>) {
+		const file = e.target.files?.[0];
+		if (!file) return;
+		setMsg("Uploading image…");
+		const r = await uploadFile(file);
+		setMsg(r ? null : "Upload failed.");
+		if (r) setF((p) => ({ ...p, body: `${p.body}\n\n${r.markdown}\n` }));
+		e.target.value = "";
+	}
 	const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
 		setF({ ...f, [k]: e.target.type === "checkbox" ? (e.target as HTMLInputElement).checked : e.target.value });
 
@@ -101,8 +130,10 @@ export function PostEditor({ existing, body: initialBody }: { existing?: PostWit
 				</div>
 			</div>
 			<div className="field">
-				<label>Cover image URL <span className="hint">(optional)</span></label>
-				<input value={f.cover_url} onChange={set("cover_url")} placeholder="/media/…" />
+				<label>Cover image <span className="hint">(optional)</span> · <button type="button" className="linkish" onClick={() => coverInput.current?.click()}>upload</button></label>
+				<input value={f.cover_url} onChange={set("cover_url")} placeholder="/media/… or paste a URL" />
+				<input ref={coverInput} type="file" accept="image/*" hidden onChange={onCoverFile} />
+				{f.cover_url && <img src={f.cover_url} alt="" style={{ marginTop: 8, maxHeight: 120, borderRadius: 6 }} />}
 			</div>
 			<div className="field">
 				<label>Excerpt <span className="hint">(blank = auto)</span></label>
@@ -112,7 +143,8 @@ export function PostEditor({ existing, body: initialBody }: { existing?: PostWit
 				<label><input type="checkbox" checked={f.pinned} onChange={set("pinned")} style={{ width: "auto", marginRight: 8 }} />Pinned</label>
 			</div>
 			<div className="field">
-				<label>Body <span className="hint">(Markdown)</span></label>
+				<label>Body <span className="hint">(Markdown)</span> · <button type="button" className="linkish" onClick={() => bodyInput.current?.click()}>insert image</button></label>
+				<input ref={bodyInput} type="file" accept="image/*" hidden onChange={onBodyFile} />
 				<textarea rows={22} value={f.body} onChange={set("body")} />
 			</div>
 			<div className="actions">

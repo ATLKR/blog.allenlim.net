@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PostCard, SiteLayout } from "#/components/ui";
+import { PostCard, SITE, SiteLayout, pageHead } from "#/components/ui";
 import { searchFn } from "#/lib/server";
 
 export const Route = createFileRoute("/search")({
 	validateSearch: (s: Record<string, unknown>) => ({ q: typeof s.q === "string" ? s.q : "" }),
 	loaderDeps: ({ search }) => ({ q: search.q }),
 	loader: ({ deps }) => (deps.q ? searchFn({ data: { q: deps.q } }) : { posts: [], q: "" }),
+	head: ({ loaderData }) => pageHead({ title: loaderData?.q ? `Search: ${loaderData.q} — ${SITE}` : `Search — ${SITE}`, robots: "noindex" }),
 	component: Search,
 });
 
