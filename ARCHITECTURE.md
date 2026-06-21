@@ -9,7 +9,7 @@ its own visibility.
 
 ```
                          ┌──────────────────────────────┐
-   git (public repo)     │  Astro app + admin CMS code   │   ← this repo
+   git (public repo)     │ TanStack Start + admin CMS    │   ← this repo
                          └──────────────────────────────┘
                                       │ deployed to
                                       ▼
@@ -57,32 +57,37 @@ Every post carries one of four states (`src/lib/db.ts`):
 | `private`  | ❌                          | ❌ (404)           | ✅                      |
 | `draft`    | ❌                          | ❌ (404)           | ✅                      |
 
-Enforced in `src/lib/content.ts` (`listPosts` filters to `public`;
-`isReachable` gates direct access) and in `src/pages/posts/[slug].astro`.
+Enforced in `src/lib/content.ts` (`listPosts` filters to live public entries,
+`isReachable` gates direct access incl. scheduling) and surfaced through the
+`getEntryFn` server function consumed by `src/routes/posts.$slug.tsx`.
 
 ## Auth
 
 Single-admin (extensible). Passwords hashed with PBKDF2-SHA256 via Web Crypto
-(`src/lib/auth.ts`); sessions stored in KV with an `HttpOnly; Secure; SameSite=Lax`
-cookie. Mutations additionally check same-origin (`src/lib/http.ts`). First run
+(`src/lib/auth.ts`, 100k iterations — the Workers ceiling); sessions stored in KV
+with an `HttpOnly; Secure; SameSite=Lax` cookie. Mutations go through
+`createServerFn` server functions that require a valid session. First run
 bootstraps the owner account at `/admin/setup`.
 
 ## Layout
 
 ```
-migrations/            D1 schema
-src/lib/               env, db, r2, auth, content, markdown, slug, site, http
-src/middleware.ts      session load + /admin guard + binds locals.env
-src/pages/             public site (index, posts, tag, category, rss, media)
-src/pages/admin/       setup, login, dashboard, editor
-src/pages/api/         setup, login, logout, posts (CRUD), media (upload)
-src/components/        PostCard, PostEditor
-src/layouts/           Base (public), Admin
+migrations/            D1 schema (0001 core, 0002 blog features + FTS)
+src/lib/               env, db, r2, auth, content, markdown, slug, site
+src/lib/server.ts      server functions (auth + content) — the data boundary
+src/routes/            file-based routes: index, posts(.$slug), tag, category,
+                       tags, search, $slug (pages), admin/* 
+src/components/        ui (layout/card/pager), PostEditor
+src/router.tsx         router setup; routeTree.gen.ts is generated
 ```
 
 ## Runtime notes
 
-- Astro v6 + `@astrojs/cloudflare`. Bindings are read via
-  `import { env } from "cloudflare:workers"` (the adapter removed
-  `Astro.locals.runtime.env` in v6); middleware exposes it as `Astro.locals.env`.
+- TanStack Start + TanStack Router on Vite, deployed to Cloudflare Workers via
+  `@cloudflare/vite-plugin`. SSR by default.
+- Bindings are read with `import { env } from "cloudflare:workers"` inside
+  server functions (`src/lib/env.ts`). The browser never touches D1/R2/KV — all
+  data access is server-side through `src/lib/server.ts`.
 - Bindings: `DB` (D1), `MEDIA` (R2), `SESSION` (KV), `IMAGES`. See `wrangler.jsonc`.
+- Search uses a derived D1 FTS5 (trigram) index kept in sync on write; R2 stays
+  the source of truth for bodies.

@@ -2,8 +2,11 @@ import type { Env } from "../env";
 
 export type Visibility = "draft" | "private" | "unlisted" | "public";
 export const VISIBILITIES: Visibility[] = ["draft", "private", "unlisted", "public"];
-/** Visible to anonymous visitors at a direct URL. */
+/** Reachable at a direct URL by an anonymous visitor (subject to scheduling). */
 export const PUBLICLY_REACHABLE: Visibility[] = ["public", "unlisted"];
+
+export type ContentType = "post" | "page";
+export const CONTENT_TYPES: ContentType[] = ["post", "page"];
 
 export interface PostRow {
 	id: string;
@@ -11,6 +14,9 @@ export interface PostRow {
 	title: string;
 	excerpt: string | null;
 	visibility: Visibility;
+	type: ContentType;
+	pinned: number;
+	cover_url: string | null;
 	body_key: string | null;
 	format: string;
 	reading_time: number;
@@ -28,18 +34,6 @@ export interface UserRow {
 	name: string | null;
 	password_hash: string;
 	role: string;
-	created_at: string;
-}
-
-export interface MediaRow {
-	id: string;
-	key: string;
-	filename: string;
-	mime: string;
-	size: number;
-	alt: string | null;
-	width: number | null;
-	height: number | null;
 	created_at: string;
 }
 

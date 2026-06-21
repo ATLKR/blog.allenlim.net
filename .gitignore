@@ -1,7 +1,11 @@
 node_modules/
 dist/
-.astro/
+.output/
+.nitro/
+.tanstack/
+.vite/
 .wrangler/
+src/routeTree.gen.ts
 uploads/
 data.db
 *.db
