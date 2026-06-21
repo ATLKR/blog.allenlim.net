@@ -1,0 +1,92 @@
+---
+import "../styles/theme.css";
+
+interface Props {
+	title: string;
+}
+const { title } = Astro.props;
+const user = Astro.locals.user;
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta name="robots" content="noindex, nofollow" />
+		<title>{title} · Admin</title>
+		<script is:inline>
+			(function () {
+				if (window.matchMedia("(prefers-color-scheme: dark)").matches)
+					document.documentElement.classList.add("dark");
+			})();
+		</script>
+	</head>
+	<body>
+		<header class="admin-header">
+			<div class="admin-nav">
+				<a href="/admin" class="brand">CMS</a>
+				<div class="links">
+					<a href="/admin">Posts</a>
+					<a href="/admin/posts/new">New</a>
+					<a href="/" target="_blank">View site ↗</a>
+				</div>
+			</div>
+			<div class="right">
+				{user && <span class="who">{user.email}</span>}
+				<form method="POST" action="/api/logout" class="inline">
+					<button type="submit" class="btn-ghost">Log out</button>
+				</form>
+			</div>
+		</header>
+		<main class="admin-main"><slot /></main>
+
+		<style is:global>
+			* { box-sizing: border-box; }
+			body, h1, h2, h3, p, ul, figure { margin: 0; }
+			:root {
+				--bg: #ffffff; --panel: #fafafa; --text: #1a1a1a; --muted: #8b8b8b;
+				--border: #e5e5e5; --accent: #0066cc; --danger: #b91c1c;
+				--font: var(--font-sans, system-ui, sans-serif);
+			}
+			:root.dark {
+				--bg: #0d0d0d; --panel: #161616; --text: #ededed; --muted: #6b6b6b;
+				--border: #2a2a2a; --accent: #4d9fff;
+			}
+			body { background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.5; }
+			a { color: var(--accent); text-decoration: none; }
+			.admin-header {
+				display: flex; justify-content: space-between; align-items: center;
+				padding: 0.75rem 1.25rem; border-bottom: 1px solid var(--border); background: var(--panel);
+			}
+			.admin-nav { display: flex; align-items: center; gap: 1.5rem; }
+			.brand { font-weight: 700; color: var(--text); }
+			.links { display: flex; gap: 1rem; font-size: 0.9rem; }
+			.links a { color: var(--text); }
+			.right { display: flex; align-items: center; gap: 1rem; }
+			.who { color: var(--muted); font-size: 0.85rem; }
+			.inline { display: inline; }
+			.admin-main { max-width: 860px; margin: 0 auto; padding: 2rem 1.25rem 5rem; }
+			.btn {
+				display: inline-block; padding: 0.5rem 1rem; background: var(--accent); color: #fff;
+				border: none; border-radius: 6px; font-size: 0.9rem; cursor: pointer; font-family: var(--font);
+			}
+			.btn:hover { filter: brightness(1.08); }
+			.btn-ghost {
+				padding: 0.4rem 0.8rem; background: transparent; color: var(--muted);
+				border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem; cursor: pointer; font-family: var(--font);
+			}
+			.btn-ghost:hover { color: var(--text); }
+			.btn-danger { color: var(--danger); border-color: var(--danger); background: transparent; }
+			input, textarea, select {
+				width: 100%; padding: 0.6rem 0.7rem; background: var(--bg); color: var(--text);
+				border: 1px solid var(--border); border-radius: 6px; font-family: var(--font); font-size: 0.95rem;
+			}
+			textarea { font-family: var(--font-mono, monospace); line-height: 1.6; resize: vertical; }
+			label { display: block; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 0.35rem; }
+			.field { margin-bottom: 1.1rem; }
+			.notice { padding: 0.7rem 0.9rem; border-radius: 6px; background: var(--panel); border: 1px solid var(--border); margin-bottom: 1.25rem; font-size: 0.9rem; }
+			.notice-error { border-color: var(--danger); color: var(--danger); }
+		</style>
+	</body>
+</html>

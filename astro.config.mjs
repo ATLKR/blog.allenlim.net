@@ -1,32 +1,15 @@
 import cloudflare from "@astrojs/cloudflare";
-import react from "@astrojs/react";
-import { d1, r2, sandbox } from "@emdash-cms/cloudflare";
-import { formsPlugin } from "@emdash-cms/plugin-forms";
-import { webhookNotifierPlugin } from "@emdash-cms/plugin-webhook-notifier";
 import { defineConfig, fontProviders } from "astro/config";
-import emdash from "emdash/astro";
 
+// Custom CMS — content lives in D1 (metadata) + R2 (bodies/media), never in git.
+// See ARCHITECTURE.md. Server-rendered on Cloudflare Workers.
 export default defineConfig({
+	site: "https://blog.allenlim.net",
 	output: "server",
-	adapter: cloudflare(),
-	image: {
-		layout: "constrained",
-		responsiveStyles: true,
-	},
-	integrations: [
-		react(),
-		emdash({
-			// Pin the public origin to https so auth/CSRF/WebAuthn origin checks
-			// never fall back to an http-derived origin behind the CF proxy.
-			siteUrl: "https://blog.allenlim.net",
-			database: d1({ binding: "DB", session: "auto" }),
-			storage: r2({ binding: "MEDIA" }),
-			plugins: [formsPlugin()],
-			sandboxed: [webhookNotifierPlugin()],
-			sandboxRunner: sandbox(),
-			marketplace: "https://marketplace.emdashcms.com",
-		}),
-	],
+	adapter: cloudflare({
+		imageService: "cloudflare",
+		platformProxy: { enabled: true },
+	}),
 	fonts: [
 		{
 			provider: fontProviders.google(),

@@ -1,0 +1,15 @@
+---
+import Admin from "../../../layouts/Admin.astro";
+import PostEditor from "../../../components/PostEditor.astro";
+
+const error = Astro.url.searchParams.get("error");
+---
+
+<Admin title="New post">
+	<h1 class="page-title">New post</h1>
+	<PostEditor error={error} />
+</Admin>
+
+<style>
+	.page-title { font-size: 1.5rem; margin-bottom: 1.5rem; }
+</style>

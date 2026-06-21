@@ -1,70 +1,35 @@
 import type { APIRoute } from "astro";
-import { getEmDashCollection, getSiteSettings } from "emdash";
+import { listPosts } from "../lib/content";
+import { getSiteIdentity } from "../lib/site";
 
-import { resolveBlogSiteIdentity } from "../utils/site-identity";
+const esc = (s: string) =>
+	s.replace(/[<>&'"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" })[c]!);
 
-export const GET: APIRoute = async ({ site, url }) => {
-	const siteUrl = site?.toString() || url.origin;
-	const { siteTitle, siteTagline } = resolveBlogSiteIdentity(await getSiteSettings());
-
-	const { entries: posts } = await getEmDashCollection("posts", {
-		orderBy: { published_at: "desc" },
-		limit: 20,
-	});
-
+export const GET: APIRoute = async ({ locals, site }) => {
+	const env = locals.env;
+	const { title, tagline } = await getSiteIdentity(env);
+	// Public only — unlisted/private/draft never appear in the feed.
+	const posts = env ? await listPosts(env, { limit: 50 }) : [];
+	const base = (site ?? new URL("https://blog.allenlim.net")).origin;
 	const items = posts
-		.map((post) => {
-			if (!post.data.publishedAt) return null;
-			const pubDate = post.data.publishedAt.toUTCString();
-
-			const postUrl = `${siteUrl}/posts/${post.id}`;
-			const title = escapeXml(post.data.title || "Untitled");
-			const description = escapeXml(post.data.excerpt || "");
-
-			return `    <item>
-      <title>${title}</title>
-      <link>${postUrl}</link>
-      <guid isPermaLink="true">${postUrl}</guid>
-      <pubDate>${pubDate}</pubDate>
-      <description>${description}</description>
-    </item>`;
-		})
-		.filter(Boolean)
+		.map(
+			(p) => `<item>
+	<title>${esc(p.title)}</title>
+	<link>${base}/posts/${p.slug}</link>
+	<guid>${base}/posts/${p.slug}</guid>
+	${p.published_at ? `<pubDate>${new Date(p.published_at).toUTCString()}</pubDate>` : ""}
+	${p.excerpt ? `<description>${esc(p.excerpt)}</description>` : ""}
+</item>`,
+		)
 		.join("\n");
-
-	const rss = `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
-  <channel>
-    <title>${escapeXml(siteTitle)}</title>
-    <description>${escapeXml(siteTagline)}</description>
-    <link>${siteUrl}</link>
-    <atom:link href="${siteUrl}/rss.xml" rel="self" type="application/rss+xml"/>
-    <language>en-us</language>
-    <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
-${items}
-  </channel>
-</rss>`;
-
-	return new Response(rss, {
-		headers: {
-			"Content-Type": "application/rss+xml; charset=utf-8",
-			"Cache-Control": "public, max-age=3600",
-		},
+	const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel>
+	<title>${esc(title)}</title>
+	<link>${base}</link>
+	<description>${esc(tagline)}</description>
+	${items}
+</channel></rss>`;
+	return new Response(xml, {
+		headers: { "Content-Type": "application/xml; charset=utf-8" },
 	});
 };
-
-const XML_ESCAPE_PATTERNS = [
-	[/&/g, "&amp;"],
-	[/</g, "&lt;"],
-	[/>/g, "&gt;"],
-	[/"/g, "&quot;"],
-	[/'/g, "&apos;"],
-] as const;
-
-function escapeXml(str: string): string {
-	let result = str;
-	for (const [pattern, replacement] of XML_ESCAPE_PATTERNS) {
-		result = result.replace(pattern, replacement);
-	}
-	return result;
-}

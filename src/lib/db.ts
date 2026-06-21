@@ -1,0 +1,64 @@
+import type { Env } from "../env";
+
+export type Visibility = "draft" | "private" | "unlisted" | "public";
+export const VISIBILITIES: Visibility[] = ["draft", "private", "unlisted", "public"];
+/** Visible to anonymous visitors at a direct URL. */
+export const PUBLICLY_REACHABLE: Visibility[] = ["public", "unlisted"];
+
+export interface PostRow {
+	id: string;
+	slug: string;
+	title: string;
+	excerpt: string | null;
+	visibility: Visibility;
+	body_key: string | null;
+	format: string;
+	reading_time: number;
+	word_count: number;
+	featured_media_id: string | null;
+	author_id: string | null;
+	published_at: string | null;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface UserRow {
+	id: string;
+	email: string;
+	name: string | null;
+	password_hash: string;
+	role: string;
+	created_at: string;
+}
+
+export interface MediaRow {
+	id: string;
+	key: string;
+	filename: string;
+	mime: string;
+	size: number;
+	alt: string | null;
+	width: number | null;
+	height: number | null;
+	created_at: string;
+}
+
+export interface Term {
+	slug: string;
+	label: string;
+}
+
+export const nowIso = () => new Date().toISOString();
+
+export async function countUsers(env: Env): Promise<number> {
+	const r = await env.DB.prepare("SELECT COUNT(*) AS n FROM users").first<{ n: number }>();
+	return r?.n ?? 0;
+}
+
+export async function getUserByEmail(env: Env, email: string): Promise<UserRow | null> {
+	return env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(email).first<UserRow>();
+}
+
+export async function getUserById(env: Env, id: string): Promise<UserRow | null> {
+	return env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(id).first<UserRow>();
+}

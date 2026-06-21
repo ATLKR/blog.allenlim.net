@@ -1,0 +1,123 @@
+---
+import { VISIBILITIES } from "../lib/db";
+
+interface Props {
+	id?: string;
+	title?: string;
+	slug?: string;
+	excerpt?: string | null;
+	visibility?: string;
+	body?: string;
+	tags?: string;
+	categories?: string;
+	saved?: boolean;
+	error?: string | null;
+}
+
+const {
+	id,
+	title = "",
+	slug = "",
+	excerpt = "",
+	visibility = "draft",
+	body = "",
+	tags = "",
+	categories = "",
+	saved = false,
+	error = null,
+} = Astro.props;
+---
+
+<form method="POST" action="/api/posts" class="editor">
+	{id && <input type="hidden" name="id" value={id} />}
+	{saved && <div class="notice">Saved.</div>}
+	{error === "title" && <div class="notice notice-error">Title is required.</div>}
+
+	<div class="field">
+		<label for="title">Title</label>
+		<input id="title" name="title" value={title} required autocomplete="off" />
+	</div>
+
+	<div class="grid">
+		<div class="field">
+			<label for="slug">Slug <span class="hint">(blank = auto)</span></label>
+			<input id="slug" name="slug" value={slug} autocomplete="off" placeholder="auto from title" />
+		</div>
+		<div class="field">
+			<label for="visibility">Visibility</label>
+			<select id="visibility" name="visibility">
+				{VISIBILITIES.map((v) => (
+					<option value={v} selected={v === visibility}>{v}</option>
+				))}
+			</select>
+		</div>
+	</div>
+
+	<div class="grid">
+		<div class="field">
+			<label for="categories">Categories <span class="hint">(comma-separated)</span></label>
+			<input id="categories" name="categories" value={categories} autocomplete="off" />
+		</div>
+		<div class="field">
+			<label for="tags">Tags <span class="hint">(comma-separated)</span></label>
+			<input id="tags" name="tags" value={tags} autocomplete="off" />
+		</div>
+	</div>
+
+	<div class="field">
+		<label for="excerpt">Excerpt <span class="hint">(blank = auto)</span></label>
+		<input id="excerpt" name="excerpt" value={excerpt ?? ""} autocomplete="off" />
+	</div>
+
+	<div class="field">
+		<label for="body">Body <span class="hint">(Markdown)</span> · <button type="button" id="upload-btn" class="linkish">insert image</button></label>
+		<input type="file" id="image-input" accept="image/*" hidden />
+		<textarea id="body" name="body" rows="22">{body}</textarea>
+	</div>
+
+	<div class="actions">
+		<button type="submit" class="btn">Save</button>
+		<a href="/admin" class="btn-ghost">Cancel</a>
+	</div>
+</form>
+
+{id && (
+	<form method="POST" action="/api/posts" class="delete-form" onsubmit="return confirm('Delete this post permanently?')">
+		<input type="hidden" name="id" value={id} />
+		<input type="hidden" name="_action" value="delete" />
+		<button type="submit" class="btn-ghost btn-danger">Delete post</button>
+	</form>
+)}
+
+<script>
+	const btn = document.getElementById("upload-btn");
+	const input = document.getElementById("image-input") as HTMLInputElement | null;
+	const body = document.getElementById("body") as HTMLTextAreaElement | null;
+	btn?.addEventListener("click", () => input?.click());
+	input?.addEventListener("change", async () => {
+		if (!input.files?.[0] || !body) return;
+		const fd = new FormData();
+		fd.append("file", input.files[0]);
+		btn!.textContent = "uploading…";
+		try {
+			const res = await fetch("/api/media", { method: "POST", body: fd });
+			const data = (await res.json()) as { markdown?: string };
+			if (data.markdown) {
+				const pos = body.selectionStart ?? body.value.length;
+				body.value = body.value.slice(0, pos) + "\n" + data.markdown + "\n" + body.value.slice(pos);
+			}
+		} finally {
+			btn!.textContent = "insert image";
+			input.value = "";
+		}
+	});
+</script>
+
+<style>
+	.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+	.hint { text-transform: none; letter-spacing: 0; color: var(--muted); font-size: 0.75rem; }
+	.actions { display: flex; gap: 0.75rem; align-items: center; margin-top: 0.5rem; }
+	.delete-form { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+	.linkish { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 0.75rem; padding: 0; }
+	@media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+</style>
