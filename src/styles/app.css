@@ -197,6 +197,17 @@ textarea { font-family: var(--font-mono); line-height: 1.6; resize: vertical; }
 .tbl td { padding: var(--sp-3); border-bottom: 1px solid var(--color-border); vertical-align: top; }
 .actions { display: flex; gap: var(--sp-3); align-items: center; margin-top: var(--sp-4); }
 
+/* comments */
+.comments { margin-top: var(--sp-16); padding-top: var(--sp-8); border-top: 1px solid var(--color-border); }
+.comments h2 { font-size: var(--fs-xl); margin-bottom: var(--sp-6); }
+.comment-list { list-style: none; display: flex; flex-direction: column; gap: var(--sp-6); margin-bottom: var(--sp-12); }
+.comment { border-bottom: 1px solid var(--color-border-subtle); padding-bottom: var(--sp-4); }
+.comment-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-3); }
+.comment-author { font-weight: 600; }
+.comment-body { margin-top: var(--sp-2); white-space: pre-wrap; color: var(--color-text-secondary); }
+.comment-form { background: var(--color-bg-subtle); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-lg); padding: var(--sp-6); }
+.comment-form h3 { font-size: var(--fs-lg); margin-bottom: var(--sp-4); }
+
 @media (max-width: 640px) {
 	.header { position: relative; }
 	.row { grid-template-columns: 1fr; }

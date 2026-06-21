@@ -6,4 +6,8 @@ export interface Env {
 	MEDIA: R2Bucket;
 	SESSION: KVNamespace;
 	IMAGES: unknown;
+	/** Public Turnstile site key (wrangler.jsonc vars). */
+	TURNSTILE_SITEKEY?: string;
+	/** Turnstile secret (wrangler secret). */
+	TURNSTILE_SECRET?: string;
 }

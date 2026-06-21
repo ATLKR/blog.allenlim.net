@@ -151,6 +151,7 @@ export function AdminShell({ email, children }: { email?: string | null; childre
 				<div className="links">
 					<Link to="/admin">Posts</Link>
 					<Link to="/admin/posts/new">New</Link>
+					<Link to="/admin/comments">Comments</Link>
 					<a href="/" target="_blank" rel="noreferrer">View site ↗</a>
 				</div>
 				<div className="nav-right">

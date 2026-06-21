@@ -5,6 +5,8 @@
 	"compatibility_flags": ["nodejs_compat"],
 	"main": "src/server.ts",
 	"observability": { "enabled": true },
+	// Public Turnstile site key (the secret is a wrangler secret: TURNSTILE_SECRET).
+	"vars": { "TURNSTILE_SITEKEY": "0x4AAAAAADomqD00JGaSVqSi" },
 	// D1: metadata index only (posts, tags, media refs, users). Bodies live in R2.
 	"d1_databases": [
 		{

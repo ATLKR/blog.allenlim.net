@@ -1,12 +1,14 @@
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
+import { Comments } from "#/components/Comments";
 import { PostCard, SITE, SiteLayout, fmtDate, pageHead, useHighlight } from "#/components/ui";
-import { getEntryFn } from "#/lib/server";
+import { getEntryFn, listCommentsFn } from "#/lib/server";
 
 export const Route = createFileRoute("/posts/$slug")({
 	loader: async ({ params }) => {
 		const res = await getEntryFn({ data: { slug: params.slug } });
 		if ("notFound" in res) throw notFound();
-		return res;
+		const comments = await listCommentsFn({ data: { postId: res.post.id } });
+		return { ...res, comments };
 	},
 	head: ({ loaderData }) =>
 		loaderData && "post" in loaderData
@@ -23,7 +25,7 @@ export const Route = createFileRoute("/posts/$slug")({
 
 function PostView() {
 	const { me } = Route.useRouteContext();
-	const { post, html, toc, prev, next, related } = Route.useLoaderData();
+	const { post, html, toc, prev, next, related, comments } = Route.useLoaderData();
 	useHighlight(post.id);
 	const date = fmtDate(post.published_at ?? post.created_at);
 	return (
@@ -88,6 +90,13 @@ function PostView() {
 						))}
 					</section>
 				)}
+
+				<Comments
+					postId={post.id}
+					initial={comments.comments}
+					siteKey={comments.siteKey}
+					member={comments.member}
+				/>
 			</article>
 		</SiteLayout>
 	);
