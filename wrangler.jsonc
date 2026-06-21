@@ -2,15 +2,14 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "allenlim-blog",
 	"main": "./src/worker.ts",
-	"account_id": "9f9fdfcfb6371183304908c2de94513d",
 	"compatibility_date": "2026-02-24",
 	"compatibility_flags": ["nodejs_compat"],
 	// D1: metadata index only (posts, tags, media refs, users). Bodies live in R2.
 	"d1_databases": [
 		{
 			"binding": "DB",
-			"database_name": "allenlim-blog",
-			"database_id": "1b565582-ec08-4bdb-b07d-2404e259c48a",
+			"database_name": "allenlim-blog-cms",
+			"database_id": "cc5634d3-2e59-4d97-83ea-f063193f47cc",
 			"migrations_dir": "migrations",
 		},
 	],
@@ -22,7 +21,7 @@
 			"bucket_name": "allenlim-blog-media",
 		},
 	],
-	// Login sessions (Astro session driver, binding name must be SESSION)
+	// Login sessions (binding name must be SESSION)
 	"kv_namespaces": [
 		{
 			"binding": "SESSION",
