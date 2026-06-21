@@ -1,5 +1,5 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { SiteLayout } from "#/components/ui";
+import { SITE, SiteLayout, pageHead } from "#/components/ui";
 import { termsFn } from "#/lib/server";
 
 export const Route = createFileRoute("/tags")({
@@ -10,6 +10,7 @@ export const Route = createFileRoute("/tags")({
 		]);
 		return { tags: tags.terms, categories: categories.terms };
 	},
+	head: () => pageHead({ title: `Topics — ${SITE}` }),
 	component: TagsIndex,
 });
 

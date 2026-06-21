@@ -1,5 +1,5 @@
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
-import { PostCard, SiteLayout, fmtDate } from "#/components/ui";
+import { PostCard, SITE, SiteLayout, fmtDate, pageHead, useHighlight } from "#/components/ui";
 import { getEntryFn } from "#/lib/server";
 
 export const Route = createFileRoute("/posts/$slug")({
@@ -8,12 +8,23 @@ export const Route = createFileRoute("/posts/$slug")({
 		if ("notFound" in res) throw notFound();
 		return res;
 	},
+	head: ({ loaderData }) =>
+		loaderData && "post" in loaderData
+			? pageHead({
+					title: `${loaderData.post.title} — ${SITE}`,
+					description: loaderData.post.excerpt,
+					image: loaderData.post.cover_url,
+					type: "article",
+					robots: loaderData.post.visibility === "public" ? null : "noindex, nofollow",
+				})
+			: {},
 	component: PostView,
 });
 
 function PostView() {
 	const { me } = Route.useRouteContext();
 	const { post, html, toc, prev, next, related } = Route.useLoaderData();
+	useHighlight(post.id);
 	const date = fmtDate(post.published_at ?? post.created_at);
 	return (
 		<SiteLayout me={me}>

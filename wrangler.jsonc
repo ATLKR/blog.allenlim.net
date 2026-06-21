@@ -3,7 +3,7 @@
 	"name": "allenlim-blog",
 	"compatibility_date": "2026-02-24",
 	"compatibility_flags": ["nodejs_compat"],
-	"main": "@tanstack/react-start/server-entry",
+	"main": "src/server.ts",
 	"observability": { "enabled": true },
 	// D1: metadata index only (posts, tags, media refs, users). Bodies live in R2.
 	"d1_databases": [

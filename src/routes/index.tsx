@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PostCard, Pager, SiteLayout } from "#/components/ui";
+import { PostCard, Pager, SITE, SiteLayout, pageHead } from "#/components/ui";
 import { listFn } from "#/lib/server";
 
 export const Route = createFileRoute("/")({
 	loader: () => listFn({ data: { type: "post", page: 1 } }),
+	head: () => pageHead({ title: SITE }),
 	component: Home,
 });
 

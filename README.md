@@ -43,7 +43,11 @@ pnpm deploy                # vite build && wrangler deploy
 
 Bindings (`DB`, `MEDIA`, `SESSION`, `IMAGES`) are configured in `wrangler.jsonc`.
 
-## Roadmap
+## SEO & media
 
-Server routes for RSS / sitemap.xml / robots.txt, R2 media serving + in-editor
-image upload, per-page `<title>`/OG tags, and client-side code highlighting.
+RSS (`/rss.xml`), `/sitemap.xml`, and `/robots.txt` are served by a custom
+worker entry (`src/server.ts`) that intercepts those paths before TanStack. The
+same entry serves R2 media at `/media/*` and accepts authenticated uploads at
+`POST /api/media` (used by the editor's image/cover upload). Each route sets its
+own `<title>` + Open Graph tags via `head()`, and code blocks are highlighted
+with highlight.js.

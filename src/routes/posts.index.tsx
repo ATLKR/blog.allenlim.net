@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PostCard, Pager, SiteLayout } from "#/components/ui";
+import { PostCard, Pager, SITE, SiteLayout, pageHead } from "#/components/ui";
 import { listFn } from "#/lib/server";
 
 export const Route = createFileRoute("/posts/")({
 	validateSearch: (s: Record<string, unknown>): { page?: number } => ({ page: s.page ? Number(s.page) || 1 : undefined }),
 	loaderDeps: ({ search }) => ({ page: search.page ?? 1 }),
 	loader: ({ deps }) => listFn({ data: { type: "post", page: deps.page } }),
+	head: () => pageHead({ title: `All Posts — ${SITE}` }),
 	component: Posts,
 });
 

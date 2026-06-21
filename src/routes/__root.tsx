@@ -17,6 +17,20 @@ export const Route = createRootRoute({
 				rel: "stylesheet",
 				href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap",
 			},
+			// highlight.js themes (system light/dark)
+			{
+				rel: "stylesheet",
+				href: "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.10.0/build/styles/github.min.css",
+				media: "(prefers-color-scheme: light)",
+			},
+			{
+				rel: "stylesheet",
+				href: "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.10.0/build/styles/github-dark.min.css",
+				media: "(prefers-color-scheme: dark)",
+			},
+		],
+		scripts: [
+			{ src: "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.10.0/build/highlight.min.js", defer: true },
 		],
 	}),
 	shellComponent: RootDocument,

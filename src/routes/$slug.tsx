@@ -1,5 +1,5 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import { SiteLayout } from "#/components/ui";
+import { SITE, SiteLayout, pageHead, useHighlight } from "#/components/ui";
 import { getEntryFn } from "#/lib/server";
 
 // Top-level pages (e.g. /resume, /about). Posts live under /posts/$slug.
@@ -9,12 +9,21 @@ export const Route = createFileRoute("/$slug")({
 		if ("notFound" in res || res.post.type !== "page") throw notFound();
 		return res;
 	},
+	head: ({ loaderData }) =>
+		loaderData && "post" in loaderData
+			? pageHead({
+					title: `${loaderData.post.title} — ${SITE}`,
+					description: loaderData.post.excerpt,
+					robots: loaderData.post.visibility === "public" ? null : "noindex, nofollow",
+				})
+			: {},
 	component: PageView,
 });
 
 function PageView() {
 	const { me } = Route.useRouteContext();
 	const { post, html, toc } = Route.useLoaderData();
+	useHighlight(post.id);
 	return (
 		<SiteLayout me={me}>
 			<article className="article">

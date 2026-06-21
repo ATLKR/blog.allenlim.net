@@ -1,5 +1,5 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import { PostCard, Pager, SiteLayout } from "#/components/ui";
+import { PostCard, Pager, SITE, SiteLayout, pageHead } from "#/components/ui";
 import { termFn } from "#/lib/server";
 
 export const Route = createFileRoute("/tag/$slug")({
@@ -10,6 +10,8 @@ export const Route = createFileRoute("/tag/$slug")({
 		if ("notFound" in res) throw notFound();
 		return res;
 	},
+	head: ({ loaderData }) =>
+		loaderData && "term" in loaderData ? pageHead({ title: `#${loaderData.term.label} — ${SITE}` }) : {},
 	component: TagView,
 });
 
