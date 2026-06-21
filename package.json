@@ -7,33 +7,23 @@
 		"dev": "astro dev",
 		"build": "astro build",
 		"preview": "astro preview",
-		"deploy": "astro build && wrangler deploy",
+		"deploy": "astro build && wrangler deploy -c dist/server/wrangler.json",
 		"typecheck": "astro check",
-		"bootstrap": "emdash init && emdash seed",
-		"seed": "emdash seed"
+		"db:migrate:local": "wrangler d1 migrations apply allenlim-blog --local",
+		"db:migrate:remote": "wrangler d1 migrations apply allenlim-blog --remote"
 	},
 	"dependencies": {
 		"@astrojs/cloudflare": "^13.1.7",
-		"@astrojs/react": "^5.0.0",
-		"@emdash-cms/cloudflare": "^0.4.0",
-		"@emdash-cms/plugin-forms": "^0.1.1",
-		"@emdash-cms/plugin-webhook-notifier": "^0.1.2",
 		"astro": "^6.0.1",
-		"emdash": "^0.4.0",
-		"react": "19.2.4",
-		"react-dom": "19.2.4"
+		"marked": "^15.0.0"
 	},
 	"devDependencies": {
 		"@astrojs/check": "^0.9.7",
 		"@cloudflare/workers-types": "^4.20260305.1",
+		"typescript": "^5.7.0",
 		"wrangler": "^4.80.0"
 	},
 	"pnpm": {
-		"onlyBuiltDependencies": [
-			"esbuild",
-			"workerd",
-			"better-sqlite3",
-			"sharp"
-		]
+		"onlyBuiltDependencies": ["esbuild", "workerd", "sharp"]
 	}
 }

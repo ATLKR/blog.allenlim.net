@@ -1,67 +1,40 @@
-# EmDash Blog Template (Cloudflare)
+# blog.allenlim.net
 
-A clean, minimal blog built with [EmDash](https://github.com/emdash-cms/emdash) and deployed on Cloudflare Workers with D1 and R2.
+A custom, self-hosted CMS powering [blog.allenlim.net](https://blog.allenlim.net),
+built on Astro + Cloudflare (Workers, D1, R2, KV).
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/emdash-cms/templates/tree/main/blog-cloudflare)
+It's intentionally split so this **source code can be public** as a portfolio
+piece while the **content stays private** — posts live in D1 + R2, never in git,
+and each post is independently `public` / `unlisted` / `private` / `draft`.
 
-![Blog template homepage](https://raw.githubusercontent.com/emdash-cms/emdash/main/assets/templates/blog/latest/homepage-light-desktop.jpg)
+See **[ARCHITECTURE.md](./ARCHITECTURE.md)** for the design, including why D1
+holds only metadata so the 10 GB limit never bites.
 
-## What's Included
+## Features
 
-- Featured post hero on the homepage
-- Post archive with reading time estimates
-- Category and tag archives
-- Full-text search
-- RSS feed
-- SEO metadata and JSON-LD
-- Dark/light mode
-- Forms plugin and webhook notifier
+- Markdown posts with per-post visibility
+- Tags + categories with archive pages
+- Admin: first-run setup, login, dashboard, markdown editor, image upload to R2
+- RSS (public posts only), SEO/`noindex` handling for non-public posts
+- Light/dark theme, server-rendered on Cloudflare Workers
 
-## Pages
-
-| Page | Route |
-|---|---|
-| Homepage | `/` |
-| All posts | `/posts` |
-| Single post | `/posts/:slug` |
-| Category archive | `/category/:slug` |
-| Tag archive | `/tag/:slug` |
-| Search | `/search` |
-| Static pages | `/pages/:slug` |
-| 404 | fallback |
-
-## Screenshots
-
-| | Desktop | Mobile |
-|---|---|---|
-| Light | ![homepage light desktop](https://raw.githubusercontent.com/emdash-cms/emdash/main/assets/templates/blog/latest/homepage-light-desktop.jpg) | ![homepage light mobile](https://raw.githubusercontent.com/emdash-cms/emdash/main/assets/templates/blog/latest/homepage-light-mobile.jpg) |
-| Dark | ![homepage dark desktop](https://raw.githubusercontent.com/emdash-cms/emdash/main/assets/templates/blog/latest/homepage-dark-desktop.jpg) | ![homepage dark mobile](https://raw.githubusercontent.com/emdash-cms/emdash/main/assets/templates/blog/latest/homepage-dark-mobile.jpg) |
-
-## Infrastructure
-
-- **Runtime:** Cloudflare Workers
-- **Database:** D1
-- **Storage:** R2
-- **Framework:** Astro with `@astrojs/cloudflare`
-
-## Local Development
+## Develop
 
 ```bash
 pnpm install
-pnpm bootstrap
-pnpm dev
+pnpm db:migrate:local      # apply schema to the local D1
+pnpm dev                   # http://localhost:4321  (visit /admin/setup first)
 ```
 
-## Deploying
+## Deploy
 
 ```bash
-pnpm deploy
+pnpm db:migrate:remote     # apply schema to the production D1 (once)
+pnpm deploy                # astro build && wrangler deploy
 ```
 
-Or click the deploy button above to set up the project in your Cloudflare account.
+Bindings (`DB`, `MEDIA`, `SESSION`, `IMAGES`) are configured in `wrangler.jsonc`.
 
-## See Also
+## Stack
 
-- [Node.js variant](../blog) -- same template using SQLite and local file storage
-- [All templates](../)
-- [EmDash documentation](https://github.com/emdash-cms/emdash/tree/main/docs)
+Astro 6 · `@astrojs/cloudflare` · Cloudflare D1 / R2 / KV · `marked` · TypeScript

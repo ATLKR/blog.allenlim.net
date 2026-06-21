@@ -2,23 +2,26 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "allenlim-blog",
 	"main": "./src/worker.ts",
-	"account_id": "9f9fdfcfb6371183304908c2de94513d",
 	"compatibility_date": "2026-02-24",
 	"compatibility_flags": ["nodejs_compat"],
+	// D1: metadata index only (posts, tags, media refs, users). Bodies live in R2.
 	"d1_databases": [
 		{
 			"binding": "DB",
-			"database_name": "allenlim-blog",
-			"database_id": "1b565582-ec08-4bdb-b07d-2404e259c48a",
+			"database_name": "allenlim-blog-cms",
+			"database_id": "cc5634d3-2e59-4d97-83ea-f063193f47cc",
+			"migrations_dir": "migrations",
 		},
 	],
+	// R2: post bodies (posts/<id>.md) + uploaded media. This is where bulk lives,
+	// so the D1 10GB ceiling is never the constraint.
 	"r2_buckets": [
 		{
 			"binding": "MEDIA",
 			"bucket_name": "allenlim-blog-media",
 		},
 	],
-	// Astro sessions (Cloudflare KV) — binding name must be SESSION
+	// Login sessions (binding name must be SESSION)
 	"kv_namespaces": [
 		{
 			"binding": "SESSION",
@@ -29,10 +32,4 @@
 	"images": {
 		"binding": "IMAGES",
 	},
-	// Worker Loader for plugin sandboxing
-	"worker_loaders": [
-		{
-			"binding": "LOADER",
-		},
-	],
 }
