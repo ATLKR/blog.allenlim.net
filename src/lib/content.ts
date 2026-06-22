@@ -29,6 +29,7 @@ export interface ListOpts {
 	type?: ContentType | "all";
 	tag?: string;
 	category?: string;
+	locale?: string;
 	limit?: number;
 	offset?: number;
 	pinnedFirst?: boolean;
@@ -56,6 +57,10 @@ function buildWhere(opts: ListOpts) {
 		binds.push(type);
 	}
 	if (!opts.includeHidden) where.push(`p.${PUBLIC_LIVE}`);
+	if (opts.locale) {
+		where.push("p.locale = ?");
+		binds.push(opts.locale);
+	}
 	if (opts.tag) {
 		where.push("p.id IN (SELECT post_id FROM post_tags WHERE tag_slug = ?)");
 		binds.push(opts.tag);
@@ -119,6 +124,20 @@ export async function getPostMetaById(env: Env, id: string): Promise<PostWithTer
 	return (await hydrateTerms(env, [row]))[0];
 }
 
+/** Public lookup by shared url_slug + locale, falling back to any locale. */
+export async function getEntryByUrlSlug(env: Env, urlSlug: string, locale: string): Promise<PostWithTerms | null> {
+	let row = await env.DB.prepare("SELECT * FROM posts WHERE url_slug = ? AND locale = ?")
+		.bind(urlSlug, locale)
+		.first<PostRow>();
+	if (!row) {
+		row = await env.DB.prepare("SELECT * FROM posts WHERE url_slug = ? ORDER BY (locale = ?) DESC LIMIT 1")
+			.bind(urlSlug, locale)
+			.first<PostRow>();
+	}
+	if (!row) return null;
+	return (await hydrateTerms(env, [row]))[0];
+}
+
 export const loadBody = (env: Env, post: PostRow) => getBody(env, post.body_key);
 
 /** Can an anonymous visitor reach this entry now? (scheduling-aware) */
@@ -133,15 +152,15 @@ export function isReachable(post: PostRow, loggedIn: boolean): boolean {
 // --- neighbors + related ---
 
 export async function getPrevNext(env: Env, post: PostRow) {
-	const base = `FROM posts WHERE type = 'post' AND ${PUBLIC_LIVE}`;
+	const base = `FROM posts WHERE type = 'post' AND locale = ? AND ${PUBLIC_LIVE}`;
 	const anchor = post.published_at ?? post.created_at;
 	const [prev, next] = await Promise.all([
-		env.DB.prepare(`SELECT id,slug,title ${base} AND COALESCE(published_at, created_at) < ? ORDER BY COALESCE(published_at, created_at) DESC LIMIT 1`)
-			.bind(anchor)
-			.first<{ id: string; slug: string; title: string }>(),
-		env.DB.prepare(`SELECT id,slug,title ${base} AND COALESCE(published_at, created_at) > ? ORDER BY COALESCE(published_at, created_at) ASC LIMIT 1`)
-			.bind(anchor)
-			.first<{ id: string; slug: string; title: string }>(),
+		env.DB.prepare(`SELECT id,url_slug,title ${base} AND COALESCE(published_at, created_at) < ? ORDER BY COALESCE(published_at, created_at) DESC LIMIT 1`)
+			.bind(post.locale, anchor)
+			.first<{ id: string; url_slug: string; title: string }>(),
+		env.DB.prepare(`SELECT id,url_slug,title ${base} AND COALESCE(published_at, created_at) > ? ORDER BY COALESCE(published_at, created_at) ASC LIMIT 1`)
+			.bind(post.locale, anchor)
+			.first<{ id: string; url_slug: string; title: string }>(),
 	]);
 	return { prev, next };
 }
@@ -153,25 +172,25 @@ export async function relatedPosts(env: Env, post: PostWithTerms, limit = 3): Pr
 	const { results } = await env.DB.prepare(
 		`SELECT p.*, COUNT(*) AS shared FROM posts p
 		 JOIN post_tags pt ON pt.post_id = p.id
-		 WHERE pt.tag_slug IN (${ph}) AND p.id != ? AND p.type='post' AND p.${PUBLIC_LIVE}
+		 WHERE pt.tag_slug IN (${ph}) AND p.id != ? AND p.type='post' AND p.locale = ? AND p.${PUBLIC_LIVE}
 		 GROUP BY p.id ORDER BY shared DESC, p.published_at DESC LIMIT ?`,
 	)
-		.bind(...tagSlugs, post.id, limit)
+		.bind(...tagSlugs, post.id, post.locale, limit)
 		.all<PostRow>();
 	return hydrateTerms(env, results ?? []);
 }
 
 // --- search (FTS) ---
 
-export async function searchPosts(env: Env, q: string, includeHidden = false): Promise<PostWithTerms[]> {
+export async function searchPosts(env: Env, q: string, locale?: string): Promise<PostWithTerms[]> {
 	const term = q.trim();
 	if (term.length < 2) return [];
 	const { results } = await env.DB.prepare(
 		`SELECT p.* FROM posts_fts f JOIN posts p ON p.id = f.post_id
-		 WHERE posts_fts MATCH ? ${includeHidden ? "" : `AND p.${PUBLIC_LIVE}`}
+		 WHERE posts_fts MATCH ? AND p.${PUBLIC_LIVE} ${locale ? "AND p.locale = ?" : ""}
 		 ORDER BY rank LIMIT 50`,
 	)
-		.bind(term)
+		.bind(...(locale ? [term, locale] : [term]))
 		.all<PostRow>();
 	return hydrateTerms(env, results ?? []);
 }
@@ -229,6 +248,35 @@ async function uniqueSlug(env: Env, desired: string, exceptId?: string): Promise
 	}
 }
 
+/** url_slug must be unique per (url_slug, locale). */
+async function uniqueUrlSlug(env: Env, desired: string, locale: string, exceptId?: string): Promise<string> {
+	const base = slugify(desired) || "untitled";
+	let slug = base;
+	for (let i = 2; ; i++) {
+		const row = await env.DB.prepare("SELECT id FROM posts WHERE url_slug = ? AND locale = ?")
+			.bind(slug, locale)
+			.first<{ id: string }>();
+		if (!row || row.id === exceptId) return slug;
+		slug = `${base}-${i}`;
+	}
+}
+
+/** A translation shares its sibling's url_slug; otherwise compute a unique one. */
+async function resolveUrlSlug(env: Env, translationOf: string | null | undefined, base: string, locale: string, exceptId?: string): Promise<string> {
+	if (translationOf) {
+		const r = await env.DB.prepare("SELECT url_slug FROM posts WHERE slug = ?")
+			.bind(translationOf)
+			.first<{ url_slug: string }>();
+		if (r?.url_slug) {
+			const taken = await env.DB.prepare("SELECT id FROM posts WHERE url_slug = ? AND locale = ?")
+				.bind(r.url_slug, locale)
+				.first<{ id: string }>();
+			if (!taken || taken.id === exceptId) return r.url_slug;
+		}
+	}
+	return uniqueUrlSlug(env, base, locale, exceptId);
+}
+
 export async function createPost(env: Env, input: PostInput): Promise<string> {
 	const id = newId();
 	const slug = await uniqueSlug(env, input.slug || input.title);
@@ -237,13 +285,15 @@ export async function createPost(env: Env, input: PostInput): Promise<string> {
 	const excerpt = input.excerpt ?? autoExcerpt(input.body);
 	const ts = nowIso();
 	const publishedAt = input.publishedAt ?? (input.visibility === "public" ? ts : null);
+	const locale = input.locale ?? "en";
 	const group = await resolveGroup(env, input.translationOf, id);
+	const urlSlug = await resolveUrlSlug(env, input.translationOf, input.slug || input.title, locale);
 	await env.DB.prepare(
-		`INSERT INTO posts (id,slug,title,excerpt,visibility,type,locale,translation_group,pinned,cover_url,body_key,format,reading_time,word_count,featured_media_id,author_id,published_at,created_at,updated_at)
-		 VALUES (?,?,?,?,?,?,?,?,?,?,?, 'md', ?,?,?,?,?,?,?)`,
+		`INSERT INTO posts (id,slug,url_slug,title,excerpt,visibility,type,locale,translation_group,pinned,cover_url,body_key,format,reading_time,word_count,featured_media_id,author_id,published_at,created_at,updated_at)
+		 VALUES (?,?,?,?,?,?,?,?,?,?,?,?, 'md', ?,?,?,?,?,?,?)`,
 	)
 		.bind(
-			id, slug, input.title, excerpt, input.visibility, input.type ?? "post", input.locale ?? "en", group,
+			id, slug, urlSlug, input.title, excerpt, input.visibility, input.type ?? "post", locale, group,
 			input.pinned ? 1 : 0, input.cover_url ?? null, key, minutes, words, null, input.authorId ?? null, publishedAt, ts, ts,
 		)
 		.run();
@@ -267,15 +317,19 @@ export async function updatePost(env: Env, id: string, input: PostInput): Promis
 			: input.visibility === "public"
 				? existing.published_at ?? ts
 				: existing.published_at;
+	const locale = input.locale ?? existing.locale;
 	const group =
 		input.translationOf !== undefined
 			? await resolveGroup(env, input.translationOf, id)
 			: existing.translation_group ?? id;
+	const urlSlug = input.translationOf
+		? await resolveUrlSlug(env, input.translationOf, input.slug || input.title, locale, id)
+		: await uniqueUrlSlug(env, input.slug || input.title, locale, id);
 	await env.DB.prepare(
-		`UPDATE posts SET slug=?,title=?,excerpt=?,visibility=?,type=?,locale=?,translation_group=?,pinned=?,cover_url=?,body_key=?,reading_time=?,word_count=?,published_at=?,updated_at=? WHERE id=?`,
+		`UPDATE posts SET slug=?,url_slug=?,title=?,excerpt=?,visibility=?,type=?,locale=?,translation_group=?,pinned=?,cover_url=?,body_key=?,reading_time=?,word_count=?,published_at=?,updated_at=? WHERE id=?`,
 	)
 		.bind(
-			slug, input.title, excerpt, input.visibility, input.type ?? existing.type, input.locale ?? existing.locale, group,
+			slug, urlSlug, input.title, excerpt, input.visibility, input.type ?? existing.type, locale, group,
 			input.pinned ? 1 : 0, input.cover_url ?? null, key, minutes, words, publishedAt, ts, id,
 		)
 		.run();
@@ -320,40 +374,24 @@ export async function listTerms(env: Env, kind: "tags" | "categories"): Promise<
 	return results ?? [];
 }
 
-/** Keep one entry per translation_group, preferring the requested locale. Preserves order. */
-export function dedupeByGroup<T extends { id: string; locale: string; translation_group: string | null }>(
-	rows: T[],
-	locale: string,
-): T[] {
-	const chosen = new Map<string, T>();
-	for (const r of rows) {
-		const g = r.translation_group || r.id;
-		const cur = chosen.get(g);
-		if (!cur || (cur.locale !== locale && r.locale === locale)) chosen.set(g, r);
-	}
-	const ids = new Set([...chosen.values()].map((r) => r.id));
-	return rows.filter((r) => ids.has(r.id));
-}
-
-/** Published siblings (other-language versions) of an entry, for the language switcher. */
-export async function getTranslations(
-	env: Env,
-	group: string,
-): Promise<Array<{ slug: string; locale: string; title: string }>> {
+/** Which locales of this url_slug are publicly reachable (for the language switcher). */
+export async function getTranslationLocales(env: Env, urlSlug: string): Promise<string[]> {
 	const { results } = await env.DB.prepare(
-		`SELECT slug, locale, title FROM posts WHERE translation_group = ? AND ${PUBLIC_LIVE} ORDER BY locale`,
+		`SELECT DISTINCT locale FROM posts WHERE url_slug = ? AND ${PUBLIC_LIVE}`,
 	)
-		.bind(group)
-		.all<{ slug: string; locale: string; title: string }>();
-	return results ?? [];
+		.bind(urlSlug)
+		.all<{ locale: string }>();
+	return (results ?? []).map((r) => r.locale);
 }
 
-/** Published pages for the nav bar (locale-deduped: one per translation group). */
-export async function listNavPages(env: Env, locale = "en"): Promise<Array<{ slug: string; title: string }>> {
+/** Published pages for the nav bar in the given locale. */
+export async function listNavPages(env: Env, locale = "en"): Promise<Array<{ url_slug: string; title: string }>> {
 	const { results } = await env.DB.prepare(
-		`SELECT slug, title, locale, translation_group, id FROM posts WHERE type = 'page' AND ${PUBLIC_LIVE} ORDER BY title`,
-	).all<{ slug: string; title: string; locale: string; translation_group: string | null; id: string }>();
-	return dedupeByGroup(results ?? [], locale).map((r) => ({ slug: r.slug, title: r.title }));
+		`SELECT url_slug, title FROM posts WHERE type = 'page' AND locale = ? AND ${PUBLIC_LIVE} ORDER BY title`,
+	)
+		.bind(locale)
+		.all<{ url_slug: string; title: string }>();
+	return results ?? [];
 }
 
 const dedupe = (a: string[]) => [...new Set(a.map((s) => slugify(s)).filter(Boolean))];
