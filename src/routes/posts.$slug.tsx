@@ -30,6 +30,10 @@ export const Route = createFileRoute("/posts/$slug")({
 					image: loaderData.post.cover_url,
 					type: "article",
 					robots: loaderData.post.visibility === "public" ? null : "noindex, nofollow",
+					alternates: [
+						{ hreflang: loaderData.post.locale, path: `/posts/${loaderData.post.slug}` },
+						...loaderData.translations.map((tl) => ({ hreflang: tl.locale, path: `/posts/${tl.slug}` })),
+					],
 				})
 			: {},
 	component: PostView,
