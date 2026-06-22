@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PostCard, SITE, SiteLayout, pageHead } from "#/components/ui";
+import { t } from "#/lib/i18n";
 import { searchFn } from "#/lib/server";
 
 export const Route = createFileRoute("/search")({
@@ -13,17 +14,18 @@ export const Route = createFileRoute("/search")({
 function Search() {
 	const { me } = Route.useRouteContext();
 	const { posts, q } = Route.useLoaderData();
+	const tr = t(me.locale);
 	return (
 		<SiteLayout me={me}>
 			<div className="container">
 				<header className="intro">
-					<h1>Search</h1>
+					<h1>{tr.search}</h1>
 					<form className="searchbox" action="/search" method="get" style={{ marginTop: "var(--sp-4)" }}>
-						<input type="search" name="q" defaultValue={q} placeholder="Search posts…" style={{ width: "100%", maxWidth: 360 }} />
+						<input type="search" name="q" defaultValue={q} placeholder={tr.searchPlaceholder} style={{ width: "100%", maxWidth: 360 }} />
 					</form>
 				</header>
-				{q && <p className="muted">{posts.length} result{posts.length === 1 ? "" : "s"} for “{q}”</p>}
-				{posts.map((p) => <PostCard key={p.id} post={p} />)}
+				{q && <p className="muted">{tr.resultsFor(posts.length, q)}</p>}
+				{posts.map((p) => <PostCard key={p.id} post={p} locale={me.locale} />)}
 			</div>
 		</SiteLayout>
 	);

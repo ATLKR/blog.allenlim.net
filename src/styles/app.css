@@ -106,6 +106,12 @@ main { flex: 1; }
 .theme-switch { display: flex; gap: 2px; padding: 2px; background: var(--color-surface); border-radius: var(--radius); }
 .theme-switch button { width: 30px; height: 26px; background: transparent; border: none; color: var(--color-muted); border-radius: var(--radius); cursor: pointer; font-size: 13px; }
 .theme-switch button.active { background: var(--color-bg); color: var(--color-text); }
+.footer-controls { display: flex; gap: var(--sp-3); align-items: center; }
+.lang-switch { display: flex; gap: 2px; padding: 2px; background: var(--color-surface); border-radius: var(--radius); }
+.lang-switch button { background: transparent; border: none; color: var(--color-muted); border-radius: var(--radius); cursor: pointer; font-size: .78rem; padding: 2px 8px; }
+.lang-switch button.active { background: var(--color-bg); color: var(--color-text); }
+.lang-switch-inline { display: inline-flex; gap: var(--sp-3); }
+.post-lang { margin-bottom: var(--sp-6); font-size: var(--fs-sm); }
 
 /* containers */
 .container { max-width: var(--content); margin: 0 auto; padding: var(--sp-16) var(--sp-6); }

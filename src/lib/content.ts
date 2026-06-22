@@ -17,7 +17,10 @@ export interface PostWithTerms extends PostRow {
 }
 
 // Public visibility, accounting for scheduled (future published_at) posts.
-const PUBLIC_LIVE = `visibility = 'public' AND (published_at IS NULL OR published_at <= datetime('now'))`;
+// published_at is stored as ISO-8601 (…T…Z); compare against an ISO 'now' so the
+// lexicographic comparison is correct (SQLite's datetime('now') uses a space and
+// would mis-sort same-day ISO timestamps).
+const PUBLIC_LIVE = `visibility = 'public' AND (published_at IS NULL OR published_at <= strftime('%Y-%m-%dT%H:%M:%fZ','now'))`;
 
 // --- listing (metadata only; bodies are NOT loaded here) ---
 
@@ -198,8 +201,22 @@ export interface PostInput {
 	body: string;
 	publishedAt?: string | null;
 	authorId?: string | null;
+	locale?: string;
+	/** Slug of the entry this is a translation of (links translation_group). */
+	translationOf?: string | null;
 	tags?: string[];
 	categories?: string[];
+}
+
+/** Resolve the translation_group: follow the linked entry's group, else stand alone. */
+async function resolveGroup(env: Env, translationOf: string | null | undefined, fallbackId: string): Promise<string> {
+	if (translationOf) {
+		const r = await env.DB.prepare("SELECT translation_group, id FROM posts WHERE slug = ?")
+			.bind(translationOf)
+			.first<{ translation_group: string | null; id: string }>();
+		if (r) return r.translation_group || r.id;
+	}
+	return fallbackId;
 }
 
 async function uniqueSlug(env: Env, desired: string, exceptId?: string): Promise<string> {
@@ -220,13 +237,14 @@ export async function createPost(env: Env, input: PostInput): Promise<string> {
 	const excerpt = input.excerpt ?? autoExcerpt(input.body);
 	const ts = nowIso();
 	const publishedAt = input.publishedAt ?? (input.visibility === "public" ? ts : null);
+	const group = await resolveGroup(env, input.translationOf, id);
 	await env.DB.prepare(
-		`INSERT INTO posts (id,slug,title,excerpt,visibility,type,pinned,cover_url,body_key,format,reading_time,word_count,featured_media_id,author_id,published_at,created_at,updated_at)
-		 VALUES (?,?,?,?,?,?,?,?,?, 'md', ?,?,?,?,?,?,?)`,
+		`INSERT INTO posts (id,slug,title,excerpt,visibility,type,locale,translation_group,pinned,cover_url,body_key,format,reading_time,word_count,featured_media_id,author_id,published_at,created_at,updated_at)
+		 VALUES (?,?,?,?,?,?,?,?,?,?,?, 'md', ?,?,?,?,?,?,?)`,
 	)
 		.bind(
-			id, slug, input.title, excerpt, input.visibility, input.type ?? "post", input.pinned ? 1 : 0,
-			input.cover_url ?? null, key, minutes, words, null, input.authorId ?? null, publishedAt, ts, ts,
+			id, slug, input.title, excerpt, input.visibility, input.type ?? "post", input.locale ?? "en", group,
+			input.pinned ? 1 : 0, input.cover_url ?? null, key, minutes, words, null, input.authorId ?? null, publishedAt, ts, ts,
 		)
 		.run();
 	await setTerms(env, id, input.tags ?? [], input.categories ?? []);
@@ -249,12 +267,16 @@ export async function updatePost(env: Env, id: string, input: PostInput): Promis
 			: input.visibility === "public"
 				? existing.published_at ?? ts
 				: existing.published_at;
+	const group =
+		input.translationOf !== undefined
+			? await resolveGroup(env, input.translationOf, id)
+			: existing.translation_group ?? id;
 	await env.DB.prepare(
-		`UPDATE posts SET slug=?,title=?,excerpt=?,visibility=?,type=?,pinned=?,cover_url=?,body_key=?,reading_time=?,word_count=?,published_at=?,updated_at=? WHERE id=?`,
+		`UPDATE posts SET slug=?,title=?,excerpt=?,visibility=?,type=?,locale=?,translation_group=?,pinned=?,cover_url=?,body_key=?,reading_time=?,word_count=?,published_at=?,updated_at=? WHERE id=?`,
 	)
 		.bind(
-			slug, input.title, excerpt, input.visibility, input.type ?? existing.type, input.pinned ? 1 : 0,
-			input.cover_url ?? null, key, minutes, words, publishedAt, ts, id,
+			slug, input.title, excerpt, input.visibility, input.type ?? existing.type, input.locale ?? existing.locale, group,
+			input.pinned ? 1 : 0, input.cover_url ?? null, key, minutes, words, publishedAt, ts, id,
 		)
 		.run();
 	await setTerms(env, id, input.tags ?? [], input.categories ?? []);
@@ -298,12 +320,40 @@ export async function listTerms(env: Env, kind: "tags" | "categories"): Promise<
 	return results ?? [];
 }
 
-/** Published pages for the nav bar (lightweight: slug + title only). */
-export async function listNavPages(env: Env): Promise<Array<{ slug: string; title: string }>> {
+/** Keep one entry per translation_group, preferring the requested locale. Preserves order. */
+export function dedupeByGroup<T extends { id: string; locale: string; translation_group: string | null }>(
+	rows: T[],
+	locale: string,
+): T[] {
+	const chosen = new Map<string, T>();
+	for (const r of rows) {
+		const g = r.translation_group || r.id;
+		const cur = chosen.get(g);
+		if (!cur || (cur.locale !== locale && r.locale === locale)) chosen.set(g, r);
+	}
+	const ids = new Set([...chosen.values()].map((r) => r.id));
+	return rows.filter((r) => ids.has(r.id));
+}
+
+/** Published siblings (other-language versions) of an entry, for the language switcher. */
+export async function getTranslations(
+	env: Env,
+	group: string,
+): Promise<Array<{ slug: string; locale: string; title: string }>> {
 	const { results } = await env.DB.prepare(
-		`SELECT slug, title FROM posts WHERE type = 'page' AND ${PUBLIC_LIVE} ORDER BY title`,
-	).all<{ slug: string; title: string }>();
+		`SELECT slug, locale, title FROM posts WHERE translation_group = ? AND ${PUBLIC_LIVE} ORDER BY locale`,
+	)
+		.bind(group)
+		.all<{ slug: string; locale: string; title: string }>();
 	return results ?? [];
+}
+
+/** Published pages for the nav bar (locale-deduped: one per translation group). */
+export async function listNavPages(env: Env, locale = "en"): Promise<Array<{ slug: string; title: string }>> {
+	const { results } = await env.DB.prepare(
+		`SELECT slug, title, locale, translation_group, id FROM posts WHERE type = 'page' AND ${PUBLIC_LIVE} ORDER BY title`,
+	).all<{ slug: string; title: string; locale: string; translation_group: string | null; id: string }>();
+	return dedupeByGroup(results ?? [], locale).map((r) => ({ slug: r.slug, title: r.title }));
 }
 
 const dedupe = (a: string[]) => [...new Set(a.map((s) => slugify(s)).filter(Boolean))];

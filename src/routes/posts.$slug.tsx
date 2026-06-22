@@ -1,7 +1,19 @@
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
 import { Comments } from "#/components/Comments";
 import { PostCard, SITE, SiteLayout, fmtDate, pageHead, useHighlight } from "#/components/ui";
+import { t } from "#/lib/i18n";
 import { getEntryFn, listCommentsFn } from "#/lib/server";
+
+function LangLinks({ translations }: { translations: Array<{ slug: string; locale: string; title: string }> }) {
+	if (translations.length === 0) return null;
+	return (
+		<div className="post-lang">
+			{translations.map((tl) => (
+				<a key={tl.slug} href={`/posts/${tl.slug}`}>{tl.locale === "ko" ? "한국어로 보기" : "Read in English"}</a>
+			))}
+		</div>
+	);
+}
 
 export const Route = createFileRoute("/posts/$slug")({
 	loader: async ({ params }) => {
@@ -25,23 +37,23 @@ export const Route = createFileRoute("/posts/$slug")({
 
 function PostView() {
 	const { me } = Route.useRouteContext();
-	const { post, html, toc, prev, next, related, comments } = Route.useLoaderData();
+	const { post, html, toc, prev, next, related, comments, translations } = Route.useLoaderData();
+	const tr = t(me.locale);
 	useHighlight(post.id);
-	const date = fmtDate(post.published_at ?? post.created_at);
+	const date = fmtDate(post.published_at ?? post.created_at, me.locale);
 	return (
 		<SiteLayout me={me}>
 			<article className="article">
 				{post.visibility !== "public" && (
-					<div className="banner">
-						This post is <strong>{post.visibility}</strong> — visible to you because you're logged in.
-					</div>
+					<div className="banner">{tr.scheduledNote(post.visibility)}</div>
 				)}
+				<LangLinks translations={translations} />
 				{post.cover_url && <img className="cover" src={post.cover_url} alt="" />}
 				<header>
 					<div className="card-meta">
 						{date && <time>{date}</time>}
 						<span className="dot" />
-						<span>{post.reading_time} min read</span>
+						<span>{tr.minRead(post.reading_time)}</span>
 					</div>
 					<h1 className="article-title">{post.title}</h1>
 					{post.categories.length > 0 && (
@@ -55,10 +67,10 @@ function PostView() {
 
 				{toc.length > 2 && (
 					<nav className="toc">
-						<div className="toc-title">Contents</div>
+						<div className="toc-title">{tr.contents}</div>
 						<ul>
-							{toc.map((t) => (
-								<li key={t.id} className={`lvl-${t.level}`}><a href={`#${t.id}`}>{t.text}</a></li>
+							{toc.map((h) => (
+								<li key={h.id} className={`lvl-${h.level}`}><a href={`#${h.id}`}>{h.text}</a></li>
 							))}
 						</ul>
 					</nav>
@@ -69,8 +81,8 @@ function PostView() {
 
 				{post.tags.length > 0 && (
 					<footer className="post-foot-tags">
-						{post.tags.map((t) => (
-							<Link key={t.slug} to="/tag/$slug" params={{ slug: t.slug }} search={{}} className="tag">#{t.label}</Link>
+						{post.tags.map((tag) => (
+							<Link key={tag.slug} to="/tag/$slug" params={{ slug: tag.slug }} search={{}} className="tag">#{tag.label}</Link>
 						))}
 					</footer>
 				)}
@@ -84,9 +96,9 @@ function PostView() {
 
 				{related.length > 0 && (
 					<section className="related">
-						<h2>Related</h2>
+						<h2>{tr.related}</h2>
 						{related.map((p) => (
-							<PostCard key={p.id} post={p} />
+							<PostCard key={p.id} post={p} locale={me.locale} />
 						))}
 					</section>
 				)}
@@ -96,6 +108,7 @@ function PostView() {
 					initial={comments.comments}
 					siteKey={comments.siteKey}
 					member={comments.member}
+					locale={me.locale}
 				/>
 			</article>
 		</SiteLayout>

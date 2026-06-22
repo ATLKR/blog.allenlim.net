@@ -1,5 +1,6 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { SITE, SiteLayout, pageHead } from "#/components/ui";
+import { t } from "#/lib/i18n";
 import { termsFn } from "#/lib/server";
 
 export const Route = createFileRoute("/tags")({
@@ -17,14 +18,14 @@ export const Route = createFileRoute("/tags")({
 function TagsIndex() {
 	const { me } = Route.useRouteContext();
 	const { tags, categories } = Route.useLoaderData();
+	const tr = t(me.locale);
 	return (
 		<SiteLayout me={me}>
 			<div className="container">
 				<header className="intro">
-					<h1>Topics</h1>
-					<p className="muted">Browse by category and tag.</p>
+					<h1>{tr.topics}</h1>
 				</header>
-				<h2 style={{ fontSize: "var(--fs-lg)" }}>Categories</h2>
+				<h2 style={{ fontSize: "var(--fs-lg)" }}>{tr.categories}</h2>
 				<div className="cloud">
 					{categories.filter((t) => t.count > 0).map((t) => (
 						<Link key={t.slug} to="/category/$slug" params={{ slug: t.slug }} search={{}}>
@@ -32,7 +33,7 @@ function TagsIndex() {
 						</Link>
 					))}
 				</div>
-				<h2 style={{ fontSize: "var(--fs-lg)", marginTop: "var(--sp-12)" }}>Tags</h2>
+				<h2 style={{ fontSize: "var(--fs-lg)", marginTop: "var(--sp-12)" }}>{tr.tagsHeading}</h2>
 				<div className="cloud">
 					{tags.filter((t) => t.count > 0).map((t) => (
 						<Link key={t.slug} to="/tag/$slug" params={{ slug: t.slug }} search={{}}>

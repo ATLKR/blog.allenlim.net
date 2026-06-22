@@ -24,6 +24,8 @@ export function PostEditor({ existing, body: initialBody }: { existing?: PostWit
 		cover_url: existing?.cover_url ?? "",
 		excerpt: existing?.excerpt ?? "",
 		publishedAt: existing?.published_at ? existing.published_at.slice(0, 16) : "",
+		locale: existing?.locale ?? "en",
+		translationOf: "",
 		tags: existing?.tags.map((t) => t.label).join(", ") ?? "",
 		categories: existing?.categories.map((c) => c.label).join(", ") ?? "",
 		body: initialBody ?? "",
@@ -69,6 +71,8 @@ export function PostEditor({ existing, body: initialBody }: { existing?: PostWit
 				cover_url: f.cover_url || null,
 				excerpt: f.excerpt || null,
 				publishedAt: f.publishedAt ? new Date(f.publishedAt).toISOString() : null,
+				locale: f.locale,
+				translationOf: f.translationOf.trim() || null,
 				tags: f.tags.split(",").map((s) => s.trim()).filter(Boolean),
 				categories: f.categories.split(",").map((s) => s.trim()).filter(Boolean),
 				body: f.body,
@@ -117,6 +121,19 @@ export function PostEditor({ existing, body: initialBody }: { existing?: PostWit
 				<div className="field">
 					<label>Publish date <span className="hint">(future = scheduled)</span></label>
 					<input type="datetime-local" value={f.publishedAt} onChange={set("publishedAt")} />
+				</div>
+			</div>
+			<div className="row">
+				<div className="field">
+					<label>Language</label>
+					<select value={f.locale} onChange={set("locale")}>
+						<option value="en">English</option>
+						<option value="ko">한국어</option>
+					</select>
+				</div>
+				<div className="field">
+					<label>Translation of <span className="hint">(slug of the other-language version)</span></label>
+					<input value={f.translationOf} onChange={set("translationOf")} placeholder="e.g. resume" />
 				</div>
 			</div>
 			<div className="row">
