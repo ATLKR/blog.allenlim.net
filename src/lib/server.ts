@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getCookie, getRequestHeader, getRequestIP, setCookie } from "@tanstack/react-start/server";
-import { type Locale, resolveLocale } from "./i18n";
+import { getCookie, getRequestIP, setCookie } from "@tanstack/react-start/server";
+import type { Locale } from "./i18n";
 import {
 	checkRate,
 	deleteComment,
@@ -25,13 +25,12 @@ import {
 	type PostWithTerms,
 	countPosts,
 	createPost,
-	dedupeByGroup,
 	deletePost,
+	getEntryByUrlSlug,
 	getPostMetaById,
-	getPostMetaBySlug,
 	getPrevNext,
 	getTerm,
-	getTranslations,
+	getTranslationLocales,
 	isReachable,
 	listNavPages,
 	listPosts,
@@ -70,34 +69,22 @@ async function requireUser(): Promise<SessionUser> {
 	return u;
 }
 
-function currentLocale(): Locale {
-	return resolveLocale(getRequestHeader("accept-language"), getCookie("lang"));
-}
-
 // --- session / auth ---
 
 export const meFn = createServerFn({ method: "GET" }).handler(async () => {
 	const env = getEnv();
-	const locale = currentLocale();
-	const [user, identity, needsSetup, navPages] = await Promise.all([
+	const [user, identity, needsSetup] = await Promise.all([
 		currentUser(),
 		getSiteIdentity(env),
 		countUsers(env).then((n) => n === 0),
-		listNavPages(env, locale),
 	]);
-	return { user, identity, needsSetup, navPages, locale };
+	return { user, identity, needsSetup };
 });
 
-export const setLangFn = createServerFn({ method: "POST" })
-	.validator((d: { lang: "en" | "ko" }) => d)
-	.handler(async ({ data }) => {
-		setCookie("lang", data.lang === "ko" ? "ko" : "en", {
-			path: "/",
-			sameSite: "lax",
-			maxAge: 60 * 60 * 24 * 365,
-		});
-		return { ok: true };
-	});
+/** Nav pages for a given locale (used by the /$lang layout). */
+export const navFn = createServerFn({ method: "GET" })
+	.validator((d: { locale: Locale }) => d)
+	.handler(async ({ data }) => ({ navPages: await listNavPages(getEnv(), data.locale) }));
 
 export const setupFn = createServerFn({ method: "POST" })
 	.validator((d: { name: string; email: string; password: string }) => d)
@@ -141,36 +128,31 @@ export const logoutFn = createServerFn({ method: "POST" }).handler(async () => {
 const PAGE_SIZE = 10;
 
 export const listFn = createServerFn({ method: "GET" })
-	.validator((d: { type?: ContentType | "all"; tag?: string; category?: string; page?: number } = {}) => d)
+	.validator((d: { locale: Locale; type?: ContentType | "all"; tag?: string; category?: string; page?: number }) => d)
 	.handler(async ({ data }) => {
 		const env = getEnv();
 		const page = Math.max(1, data.page ?? 1);
-		const all = await listPosts(env, { type: data.type ?? "post", tag: data.tag, category: data.category, pinnedFirst: true, limit: 1000 });
-		const deduped = dedupeByGroup(all, currentLocale());
-		const total = deduped.length;
-		const start = (page - 1) * PAGE_SIZE;
-		return {
-			posts: deduped.slice(start, start + PAGE_SIZE),
-			total,
-			page,
-			pageSize: PAGE_SIZE,
-			pages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
-		};
+		const opts = { type: data.type ?? "post", tag: data.tag, category: data.category, locale: data.locale, pinnedFirst: true } as const;
+		const [posts, total] = await Promise.all([
+			listPosts(env, { ...opts, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
+			countPosts(env, opts),
+		]);
+		return { posts, total, page, pageSize: PAGE_SIZE, pages: Math.max(1, Math.ceil(total / PAGE_SIZE)) };
 	});
 
 export const getEntryFn = createServerFn({ method: "GET" })
-	.validator((d: { slug: string }) => d)
+	.validator((d: { urlSlug: string; locale: Locale }) => d)
 	.handler(async ({ data }) => {
 		const env = getEnv();
-		const post = await getPostMetaBySlug(env, data.slug);
+		const post = await getEntryByUrlSlug(env, data.urlSlug, data.locale);
 		const user = await currentUser();
 		if (!post || !isReachable(post, !!user)) return { notFound: true as const };
 		const body = await loadBody(env, post);
 		const { html, toc } = renderWithToc(body);
-		const [{ prev, next }, related, translations] = await Promise.all([
+		const [{ prev, next }, related, locales] = await Promise.all([
 			getPrevNext(env, post),
 			post.type === "post" ? relatedPosts(env, post, 3) : Promise.resolve([]),
-			getTranslations(env, post.translation_group || post.id),
+			getTranslationLocales(env, post.url_slug),
 		]);
 		return {
 			post,
@@ -180,14 +162,15 @@ export const getEntryFn = createServerFn({ method: "GET" })
 			next,
 			related,
 			isAdmin: !!user,
-			translations: translations.filter((t) => t.slug !== post.slug),
+			// other-language versions available at the same url_slug
+			otherLocales: locales.filter((l) => l !== post.locale),
 		};
 	});
 
 export const searchFn = createServerFn({ method: "GET" })
-	.validator((d: { q: string }) => d)
+	.validator((d: { q: string; locale: Locale }) => d)
 	.handler(async ({ data }) => {
-		const posts = await searchPosts(getEnv(), data.q);
+		const posts = await searchPosts(getEnv(), data.q, data.locale);
 		return { posts, q: data.q };
 	});
 
@@ -196,18 +179,19 @@ export const termsFn = createServerFn({ method: "GET" })
 	.handler(async ({ data }) => ({ terms: await listTerms(getEnv(), data.kind) }));
 
 export const termFn = createServerFn({ method: "GET" })
-	.validator((d: { kind: "tags" | "categories"; slug: string; page?: number } = { kind: "tags", slug: "" }) => d)
+	.validator((d: { kind: "tags" | "categories"; slug: string; locale: Locale; page?: number }) => d)
 	.handler(async ({ data }) => {
 		const env = getEnv();
 		const term = await getTerm(env, data.kind, data.slug);
 		if (!term) return { notFound: true as const };
 		const key = data.kind === "tags" ? "tag" : "category";
 		const page = Math.max(1, data.page ?? 1);
-		const all = await listPosts(env, { [key]: data.slug, pinnedFirst: true, limit: 1000 });
-		const deduped = dedupeByGroup(all, currentLocale());
-		const total = deduped.length;
-		const start = (page - 1) * PAGE_SIZE;
-		return { term, posts: deduped.slice(start, start + PAGE_SIZE), total, page, pages: Math.max(1, Math.ceil(total / PAGE_SIZE)) };
+		const opts = { [key]: data.slug, locale: data.locale, pinnedFirst: true } as const;
+		const [posts, total] = await Promise.all([
+			listPosts(env, { ...opts, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
+			countPosts(env, opts),
+		]);
+		return { term, posts, total, page, pages: Math.max(1, Math.ceil(total / PAGE_SIZE)) };
 	});
 
 // --- admin ---

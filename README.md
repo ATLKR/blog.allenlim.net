@@ -24,9 +24,10 @@ holds only metadata so the 10 GB limit never bites.
   auto-slug, ⌘/Ctrl+S save, unsaved-changes guard)
 - Reading-progress bar, hreflang alternates, RSS autodiscovery, skip-to-content,
   favicon, and a localized 404
-- Bilingual (English / 한국어): browser-language detection + manual toggle for
-  the UI, and per-entry locale with linked translations (the language switch
-  swaps to the other-language version, falling back to the original)
+- Bilingual (English / 한국어) with locale subdirectories: `/en/…` and `/ko/…`,
+  `/` redirects to the browser-detected locale, and translations share a URL
+  slug (`/en/resume` ↔ `/ko/resume`) with hreflang alternates. Old non-prefixed
+  URLs 301 to their localized path.
 - Light/dark theme, server-rendered on Cloudflare Workers
 
 ## Stack

@@ -36,7 +36,7 @@ export function PostEditor({ existing, body: initialBody }: { existing?: PostWit
 	const router = useRouter();
 	const [f, setF] = useState({
 		title: existing?.title ?? "",
-		slug: existing?.slug ?? "",
+		slug: existing?.url_slug ?? "",
 		type: existing?.type ?? "post",
 		visibility: existing?.visibility ?? "draft",
 		pinned: !!existing?.pinned,
@@ -222,7 +222,7 @@ export function PostEditor({ existing, body: initialBody }: { existing?: PostWit
 				<div className="actions">
 					<button type="button" className="btn" disabled={saving} onClick={save}>{saving ? "Saving…" : "Save"}{dirty ? " •" : ""}</button>
 					<span className="muted" style={{ fontSize: ".8rem" }}>⌘/Ctrl+S</span>
-					{existing && <a href={f.type === "page" ? `/${f.slug}` : `/posts/${f.slug}`} target="_blank" rel="noreferrer" style={{ marginLeft: "auto", fontSize: ".85rem" }}>View ↗</a>}
+					{existing && <a href={`/${f.locale}/${f.type === "page" ? "" : "posts/"}${f.slug}`} target="_blank" rel="noreferrer" style={{ marginLeft: "auto", fontSize: ".85rem" }}>View ↗</a>}
 				</div>
 			</div>
 

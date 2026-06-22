@@ -17,8 +17,8 @@ export async function rssResponse(env: Env, url: URL): Promise<Response> {
 		.map(
 			(p) => `<item>
 	<title>${esc(p.title)}</title>
-	<link>${base}/posts/${p.slug}</link>
-	<guid>${base}/posts/${p.slug}</guid>
+	<link>${base}/${p.locale}/posts/${p.url_slug}</link>
+	<guid>${base}/${p.locale}/posts/${p.url_slug}</guid>
 	${p.published_at ? `<pubDate>${new Date(p.published_at).toUTCString()}</pubDate>` : ""}
 	${p.excerpt ? `<description>${esc(p.excerpt)}</description>` : ""}
 </item>`,
@@ -42,11 +42,14 @@ export async function sitemapResponse(env: Env, url: URL): Promise<Response> {
 		listPosts(env, { type: "page", limit: 1000 }),
 	]);
 	const urls = [
-		`<url><loc>${base}/</loc></url>`,
-		`<url><loc>${base}/posts</loc></url>`,
-		`<url><loc>${base}/tags</loc></url>`,
-		...posts.map((p) => `<url><loc>${base}/posts/${p.slug}</loc><lastmod>${(p.updated_at || "").slice(0, 10)}</lastmod></url>`),
-		...pages.map((p) => `<url><loc>${base}/${p.slug}</loc><lastmod>${(p.updated_at || "").slice(0, 10)}</lastmod></url>`),
+		`<url><loc>${base}/en</loc></url>`,
+		`<url><loc>${base}/ko</loc></url>`,
+		`<url><loc>${base}/en/posts</loc></url>`,
+		`<url><loc>${base}/ko/posts</loc></url>`,
+		`<url><loc>${base}/en/tags</loc></url>`,
+		`<url><loc>${base}/ko/tags</loc></url>`,
+		...posts.map((p) => `<url><loc>${base}/${p.locale}/posts/${p.url_slug}</loc><lastmod>${(p.updated_at || "").slice(0, 10)}</lastmod></url>`),
+		...pages.map((p) => `<url><loc>${base}/${p.locale}/${p.url_slug}</loc><lastmod>${(p.updated_at || "").slice(0, 10)}</lastmod></url>`),
 	].join("\n");
 	const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`;

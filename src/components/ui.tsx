@@ -2,7 +2,7 @@ import { Link, useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 import type { PostWithTerms } from "#/lib/content";
 import { type Locale, t } from "#/lib/i18n";
-import { logoutFn, setLangFn } from "#/lib/server";
+import { logoutFn } from "#/lib/server";
 
 export const SITE = "allenlim.net";
 export const SITE_ORIGIN = "https://blog.allenlim.net";
@@ -27,15 +27,10 @@ export function pageHead(opts: {
 	}
 	if (opts.image) meta.push({ property: "og:image", content: opts.image });
 	if (opts.robots) meta.push({ name: "robots", content: opts.robots });
-	const links = (opts.alternates ?? []).map((a) => ({
-		rel: "alternate",
-		hrefLang: a.hreflang,
-		href: SITE_ORIGIN + a.path,
-	}));
+	const links = (opts.alternates ?? []).map((a) => ({ rel: "alternate", hrefLang: a.hreflang, href: SITE_ORIGIN + a.path }));
 	return links.length ? { meta, links } : { meta };
 }
 
-/** Runs highlight.js over rendered markdown after mount. */
 export function useHighlight(dep: unknown) {
 	useEffect(() => {
 		const run = () => (window as unknown as { hljs?: { highlightAll: () => void } }).hljs?.highlightAll();
@@ -48,9 +43,8 @@ export function useHighlight(dep: unknown) {
 export interface Me {
 	user: { id: string; email: string; name: string | null; role: string } | null;
 	identity: { title: string; tagline: string };
-	needsSetup?: boolean;
-	navPages?: Array<{ slug: string; title: string }>;
 	locale: Locale;
+	navPages: Array<{ url_slug: string; title: string }>;
 }
 
 export function fmtDate(value?: string | null, locale: Locale = "en") {
@@ -91,39 +85,40 @@ function ThemeSwitch() {
 	);
 }
 
+/** Swaps the leading /en|/ko segment in place, keeping the same page. */
 function LangSwitch({ locale }: { locale: Locale }) {
-	const router = useRouter();
-	const choose = async (lang: Locale) => {
-		if (lang === locale) return;
-		await setLangFn({ data: { lang } });
-		router.invalidate();
+	const go = (l: Locale) => {
+		if (l === locale) return;
+		const path = window.location.pathname.replace(/^\/(en|ko)(?=\/|$)/, `/${l}`);
+		window.location.href = (path.startsWith(`/${l}`) ? path : `/${l}`) + window.location.search;
 	};
 	return (
 		<div className="lang-switch">
-			<button type="button" className={locale === "en" ? "active" : ""} onClick={() => choose("en")}>EN</button>
-			<button type="button" className={locale === "ko" ? "active" : ""} onClick={() => choose("ko")}>한국어</button>
+			<button type="button" className={locale === "en" ? "active" : ""} onClick={() => go("en")}>EN</button>
+			<button type="button" className={locale === "ko" ? "active" : ""} onClick={() => go("ko")}>한국어</button>
 		</div>
 	);
 }
 
 export function SiteLayout({ me, children }: { me: Me; children: React.ReactNode }) {
 	const tr = t(me.locale);
+	const lang = me.locale;
 	return (
 		<div className="site">
 			<header className="header">
 				<nav className="nav">
-					<Link to="/" className="brand">{me.identity.title}</Link>
+					<Link to="/$lang" params={{ lang }} className="brand">{me.identity.title}</Link>
 					<div className="nav-right">
-						<form className="searchbox" action="/search" method="get">
+						<form className="searchbox" action={`/${lang}/search`} method="get">
 							<input type="search" name="q" placeholder={tr.searchPlaceholder} aria-label={tr.search} />
 						</form>
 						<div className="nav-links">
-							<Link to="/posts" search={{}}>{tr.posts}</Link>
-							{(me.navPages ?? []).map((p) => (
-								<Link key={p.slug} to="/$slug" params={{ slug: p.slug }}>{p.title}</Link>
+							<Link to="/$lang/posts" params={{ lang }} search={{}}>{tr.posts}</Link>
+							{me.navPages.map((p) => (
+								<Link key={p.url_slug} to="/$lang/$slug" params={{ lang, slug: p.url_slug }}>{p.title}</Link>
 							))}
-							<Link to="/tags">{tr.tags}</Link>
-							{me.user && <Link to="/admin" className="nav-admin">{tr.admin}</Link>}
+							<Link to="/$lang/tags" params={{ lang }}>{tr.tags}</Link>
+							{me.user && <a href="/admin" className="nav-admin">{tr.admin}</a>}
 						</div>
 					</div>
 				</nav>
@@ -133,7 +128,9 @@ export function SiteLayout({ me, children }: { me: Me; children: React.ReactNode
 				<div className="footer-inner">
 					<span>© {new Date().getFullYear()} {me.identity.title}
 						<span className="sep">·</span>
-						<Link to={me.user ? "/admin" : "/admin/login"}>{me.user ? tr.admin : tr.login}</Link>
+						<a href="/rss.xml">RSS</a>
+						<span className="sep">·</span>
+						<a href="/admin">{me.user ? tr.admin : tr.login}</a>
 					</span>
 					<div className="footer-controls">
 						<LangSwitch locale={me.locale} />
@@ -158,14 +155,14 @@ export function PostCard({ post, locale = "en" }: { post: PostWithTerms; locale?
 				<span>{tr.minRead(post.reading_time)}</span>
 				{post.visibility !== "public" && <span className={`badge ${post.visibility}`}>{post.visibility}</span>}
 			</div>
-			<Link to="/posts/$slug" params={{ slug: post.slug }} className="titlelink">
+			<Link to="/$lang/posts/$slug" params={{ lang: locale, slug: post.url_slug }} className="titlelink">
 				<h2 className="card-title">{post.title}</h2>
 			</Link>
 			{post.excerpt && <p className="card-excerpt">{post.excerpt}</p>}
 			{post.tags.length > 0 && (
 				<div className="tags">
 					{post.tags.map((tag) => (
-						<Link key={tag.slug} to="/tag/$slug" params={{ slug: tag.slug }} search={{}} className="tag">{tag.label}</Link>
+						<Link key={tag.slug} to="/$lang/tag/$slug" params={{ lang: locale, slug: tag.slug }} search={{}} className="tag">{tag.label}</Link>
 					))}
 				</div>
 			)}
@@ -192,7 +189,7 @@ export function AdminShell({ email, children }: { email?: string | null; childre
 					<Link to="/admin">Posts</Link>
 					<Link to="/admin/posts/new">New</Link>
 					<Link to="/admin/comments">Comments</Link>
-					<a href="/" target="_blank" rel="noreferrer">View site ↗</a>
+					<a href="/en" target="_blank" rel="noreferrer">View site ↗</a>
 				</div>
 				<div className="nav-right">
 					{email && <span className="muted" style={{ fontSize: ".85rem" }}>{email}</span>}
@@ -207,14 +204,7 @@ export function AdminShell({ email, children }: { email?: string | null; childre
 function LogoutButton() {
 	const router = useRouter();
 	return (
-		<button
-			type="button"
-			className="btn-ghost"
-			onClick={async () => {
-				await logoutFn();
-				router.navigate({ to: "/admin/login" });
-			}}
-		>
+		<button type="button" className="btn-ghost" onClick={async () => { await logoutFn(); router.navigate({ to: "/admin/login" }); }}>
 			Log out
 		</button>
 	);

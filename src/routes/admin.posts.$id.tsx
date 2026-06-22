@@ -22,7 +22,7 @@ function EditPost() {
 		<AdminShell email={me.user?.email}>
 			<div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "1.5rem" }}>
 				<h1 style={{ fontSize: "1.5rem" }}>Edit entry</h1>
-				<a href={post.type === "page" ? `/${post.slug}` : `/posts/${post.slug}`} target="_blank" rel="noreferrer" style={{ fontSize: ".85rem" }}>View ↗</a>
+				<a href={`/${post.locale}/${post.type === "page" ? "" : "posts/"}${post.url_slug}`} target="_blank" rel="noreferrer" style={{ fontSize: ".85rem" }}>View ↗</a>
 			</div>
 			<PostEditor existing={post} body={body} />
 		</AdminShell>

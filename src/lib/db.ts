@@ -11,6 +11,8 @@ export const CONTENT_TYPES: ContentType[] = ["post", "page"];
 export interface PostRow {
 	id: string;
 	slug: string;
+	/** Shared across translations; what /<lang>/… URLs use. */
+	url_slug: string;
 	title: string;
 	excerpt: string | null;
 	visibility: Visibility;
