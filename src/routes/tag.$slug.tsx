@@ -1,5 +1,6 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { PostCard, Pager, SITE, SiteLayout, pageHead } from "#/components/ui";
+import { t } from "#/lib/i18n";
 import { termFn } from "#/lib/server";
 
 export const Route = createFileRoute("/tag/$slug")({
@@ -18,15 +19,16 @@ export const Route = createFileRoute("/tag/$slug")({
 function TagView() {
 	const { me } = Route.useRouteContext();
 	const { term, posts, page, pages, total } = Route.useLoaderData();
+	const tr = t(me.locale);
 	return (
 		<SiteLayout me={me}>
 			<div className="container">
 				<header className="intro">
-					<p className="kicker">Tag</p>
+					<p className="kicker">{tr.tags}</p>
 					<h1>#{term.label}</h1>
-					<p className="muted">{total} {total === 1 ? "post" : "posts"}</p>
+					<p className="muted">{tr.postsCount(total)}</p>
 				</header>
-				{posts.map((p) => <PostCard key={p.id} post={p} />)}
+				{posts.map((p) => <PostCard key={p.id} post={p} locale={me.locale} />)}
 				<Pager page={page} pages={pages} build={(p) => `/tag/${term.slug}?page=${p}`} />
 			</div>
 		</SiteLayout>

@@ -15,6 +15,8 @@ export interface PostRow {
 	excerpt: string | null;
 	visibility: Visibility;
 	type: ContentType;
+	locale: string;
+	translation_group: string | null;
 	pinned: number;
 	cover_url: string | null;
 	body_key: string | null;

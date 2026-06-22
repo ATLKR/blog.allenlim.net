@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { type Locale, t } from "#/lib/i18n";
 import { addCommentFn } from "#/lib/server";
 import { fmtDate } from "./ui";
 
@@ -21,12 +22,15 @@ export function Comments({
 	initial,
 	siteKey,
 	member,
+	locale = "en",
 }: {
 	postId: string;
 	initial: CommentItem[];
 	siteKey: string;
 	member: { name: string } | null;
+	locale?: Locale;
 }) {
+	const tr = t(locale);
 	const [comments, setComments] = useState<CommentItem[]>(initial);
 	const [name, setName] = useState(member?.name ?? "");
 	const [email, setEmail] = useState("");
@@ -53,7 +57,7 @@ export function Comments({
 		const token = member
 			? "member"
 			: String(new FormData(e.currentTarget).get("cf-turnstile-response") ?? "");
-		if (!member && !token) return setMsg("Please complete the captcha.");
+		if (!member && !token) return setMsg(tr.captchaIncomplete);
 		setBusy(true);
 		const res = await addCommentFn({ data: { postId, name, email, body, token } });
 		setBusy(false);
@@ -64,20 +68,20 @@ export function Comments({
 		}
 		setComments((c) => [...c, res.comment!]);
 		setBody("");
-		setMsg("Posted.");
+		setMsg(tr.posted);
 		window.turnstile?.reset(widgetRef.current ?? undefined);
 	}
 
 	return (
 		<section className="comments">
-			<h2>Comments {comments.length > 0 && <span className="muted">({comments.length})</span>}</h2>
+			<h2>{tr.comments} {comments.length > 0 && <span className="muted">({comments.length})</span>}</h2>
 			<ul className="comment-list">
-				{comments.length === 0 && <p className="muted">No comments yet. Be the first.</p>}
+				{comments.length === 0 && <p className="muted">{tr.noComments}</p>}
 				{comments.map((c) => (
 					<li key={c.id} className="comment">
 						<div className="comment-head">
 							<span className="comment-author">{c.author_name}{c.is_member && <span className="badge pin" style={{ marginLeft: 6 }}>member</span>}</span>
-							<time className="muted">{fmtDate(c.created_at)}</time>
+							<time className="muted">{fmtDate(c.created_at, locale)}</time>
 						</div>
 						<p className="comment-body">{c.body}</p>
 					</li>
@@ -85,18 +89,18 @@ export function Comments({
 			</ul>
 
 			<form className="comment-form" onSubmit={submit}>
-				<h3>Leave a comment</h3>
-				{msg && <div className={`notice${msg === "Posted." ? "" : " error"}`}>{msg}</div>}
+				<h3>{tr.leaveComment}</h3>
+				{msg && <div className={`notice${msg === tr.posted ? "" : " error"}`}>{msg}</div>}
 				{!member && (
 					<div className="row">
-						<div className="field"><label>Name</label><input value={name} onChange={(e) => setName(e.target.value)} required /></div>
-						<div className="field"><label>Email <span className="hint">(optional, private)</span></label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+						<div className="field"><label>{tr.name}</label><input value={name} onChange={(e) => setName(e.target.value)} required /></div>
+						<div className="field"><label>{tr.emailOptional}</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
 					</div>
 				)}
-				{member && <p className="muted" style={{ fontSize: ".85rem" }}>Commenting as <strong>{member.name}</strong>.</p>}
-				<div className="field"><label>Comment</label><textarea rows={4} value={body} onChange={(e) => setBody(e.target.value)} required /></div>
+				{member && <p className="muted" style={{ fontSize: ".85rem" }}>{tr.commentingAs} <strong>{member.name}</strong>.</p>}
+				<div className="field"><label>{tr.commentLabel}</label><textarea rows={4} value={body} onChange={(e) => setBody(e.target.value)} required /></div>
 				{!member && siteKey && <div ref={widgetRef} className="cf-turnstile" data-sitekey={siteKey} style={{ marginBottom: "1rem" }} />}
-				<button type="submit" className="btn" disabled={busy}>{busy ? "Posting…" : "Post comment"}</button>
+				<button type="submit" className="btn" disabled={busy}>{busy ? tr.posting : tr.postComment}</button>
 			</form>
 		</section>
 	);

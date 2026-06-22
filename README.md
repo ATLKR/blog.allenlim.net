@@ -20,6 +20,9 @@ holds only metadata so the 10 GB limit never bites.
 - Comments with Cloudflare Turnstile + KV rate-limiting (guest now,
   member-ready schema), moderated from the admin
 - Admin: first-run setup, login, dashboard, markdown editor, comment moderation
+- Bilingual (English / 한국어): browser-language detection + manual toggle for
+  the UI, and per-entry locale with linked translations (the language switch
+  swaps to the other-language version, falling back to the original)
 - Light/dark theme, server-rendered on Cloudflare Workers
 
 ## Stack

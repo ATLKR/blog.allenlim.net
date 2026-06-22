@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getCookie, getRequestIP, setCookie } from "@tanstack/react-start/server";
+import { getCookie, getRequestHeader, getRequestIP, setCookie } from "@tanstack/react-start/server";
+import { type Locale, resolveLocale } from "./i18n";
 import {
 	checkRate,
 	deleteComment,
@@ -24,11 +25,13 @@ import {
 	type PostWithTerms,
 	countPosts,
 	createPost,
+	dedupeByGroup,
 	deletePost,
 	getPostMetaById,
 	getPostMetaBySlug,
 	getPrevNext,
 	getTerm,
+	getTranslations,
 	isReachable,
 	listNavPages,
 	listPosts,
@@ -67,18 +70,34 @@ async function requireUser(): Promise<SessionUser> {
 	return u;
 }
 
+function currentLocale(): Locale {
+	return resolveLocale(getRequestHeader("accept-language"), getCookie("lang"));
+}
+
 // --- session / auth ---
 
 export const meFn = createServerFn({ method: "GET" }).handler(async () => {
 	const env = getEnv();
+	const locale = currentLocale();
 	const [user, identity, needsSetup, navPages] = await Promise.all([
 		currentUser(),
 		getSiteIdentity(env),
 		countUsers(env).then((n) => n === 0),
-		listNavPages(env),
+		listNavPages(env, locale),
 	]);
-	return { user, identity, needsSetup, navPages };
+	return { user, identity, needsSetup, navPages, locale };
 });
+
+export const setLangFn = createServerFn({ method: "POST" })
+	.validator((d: { lang: "en" | "ko" }) => d)
+	.handler(async ({ data }) => {
+		setCookie("lang", data.lang === "ko" ? "ko" : "en", {
+			path: "/",
+			sameSite: "lax",
+			maxAge: 60 * 60 * 24 * 365,
+		});
+		return { ok: true };
+	});
 
 export const setupFn = createServerFn({ method: "POST" })
 	.validator((d: { name: string; email: string; password: string }) => d)
@@ -126,12 +145,17 @@ export const listFn = createServerFn({ method: "GET" })
 	.handler(async ({ data }) => {
 		const env = getEnv();
 		const page = Math.max(1, data.page ?? 1);
-		const opts = { type: data.type ?? "post", tag: data.tag, category: data.category, pinnedFirst: true } as const;
-		const [posts, total] = await Promise.all([
-			listPosts(env, { ...opts, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
-			countPosts(env, opts),
-		]);
-		return { posts, total, page, pageSize: PAGE_SIZE, pages: Math.max(1, Math.ceil(total / PAGE_SIZE)) };
+		const all = await listPosts(env, { type: data.type ?? "post", tag: data.tag, category: data.category, pinnedFirst: true, limit: 1000 });
+		const deduped = dedupeByGroup(all, currentLocale());
+		const total = deduped.length;
+		const start = (page - 1) * PAGE_SIZE;
+		return {
+			posts: deduped.slice(start, start + PAGE_SIZE),
+			total,
+			page,
+			pageSize: PAGE_SIZE,
+			pages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
+		};
 	});
 
 export const getEntryFn = createServerFn({ method: "GET" })
@@ -143,11 +167,21 @@ export const getEntryFn = createServerFn({ method: "GET" })
 		if (!post || !isReachable(post, !!user)) return { notFound: true as const };
 		const body = await loadBody(env, post);
 		const { html, toc } = renderWithToc(body);
-		const [{ prev, next }, related] = await Promise.all([
+		const [{ prev, next }, related, translations] = await Promise.all([
 			getPrevNext(env, post),
 			post.type === "post" ? relatedPosts(env, post, 3) : Promise.resolve([]),
+			getTranslations(env, post.translation_group || post.id),
 		]);
-		return { post, html, toc, prev, next, related, isAdmin: !!user };
+		return {
+			post,
+			html,
+			toc,
+			prev,
+			next,
+			related,
+			isAdmin: !!user,
+			translations: translations.filter((t) => t.slug !== post.slug),
+		};
 	});
 
 export const searchFn = createServerFn({ method: "GET" })
@@ -169,12 +203,11 @@ export const termFn = createServerFn({ method: "GET" })
 		if (!term) return { notFound: true as const };
 		const key = data.kind === "tags" ? "tag" : "category";
 		const page = Math.max(1, data.page ?? 1);
-		const opts = { [key]: data.slug, pinnedFirst: true } as const;
-		const [posts, total] = await Promise.all([
-			listPosts(env, { ...opts, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
-			countPosts(env, opts),
-		]);
-		return { term, posts, total, page, pages: Math.max(1, Math.ceil(total / PAGE_SIZE)) };
+		const all = await listPosts(env, { [key]: data.slug, pinnedFirst: true, limit: 1000 });
+		const deduped = dedupeByGroup(all, currentLocale());
+		const total = deduped.length;
+		const start = (page - 1) * PAGE_SIZE;
+		return { term, posts: deduped.slice(start, start + PAGE_SIZE), total, page, pages: Math.max(1, Math.ceil(total / PAGE_SIZE)) };
 	});
 
 // --- admin ---
@@ -206,6 +239,8 @@ interface SaveInput {
 	pinned?: boolean;
 	cover_url?: string | null;
 	publishedAt?: string | null;
+	locale?: string;
+	translationOf?: string | null;
 	body: string;
 	tags?: string[];
 	categories?: string[];
@@ -226,6 +261,8 @@ export const saveFn = createServerFn({ method: "POST" })
 			pinned: !!data.pinned,
 			cover_url: data.cover_url?.trim() || null,
 			publishedAt: data.publishedAt ?? undefined,
+			locale: data.locale === "ko" ? "ko" : "en",
+			translationOf: data.translationOf?.trim() || null,
 			body: data.body ?? "",
 			tags: data.tags ?? [],
 			categories: data.categories ?? [],
