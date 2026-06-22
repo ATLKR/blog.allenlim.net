@@ -1,5 +1,6 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { t } from "#/lib/i18n";
+import { SITE, pageHead } from "#/components/ui";
+import { type Locale, t } from "#/lib/i18n";
 import { termsFn } from "#/lib/server";
 
 export const Route = createFileRoute("/$lang/tags")({
@@ -10,6 +11,7 @@ export const Route = createFileRoute("/$lang/tags")({
 		]);
 		return { tags: tags.terms, categories: categories.terms };
 	},
+	head: ({ params }) => pageHead({ title: `${t(params.lang as Locale).topics} — ${SITE}`, path: `/${params.lang}/tags` }),
 	component: TagsIndex,
 });
 

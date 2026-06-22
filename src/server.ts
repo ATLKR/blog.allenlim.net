@@ -9,6 +9,7 @@ import {
 	uploadResponse,
 } from "#/lib/feeds";
 import { resolveLocale } from "#/lib/i18n";
+import { ogResponse } from "#/lib/og";
 
 const startFetch = createStartHandler(defaultStreamHandler);
 const cfEnv = env as unknown as Env;
@@ -24,6 +25,7 @@ export default {
 		if (path === "/rss.xml") return rssResponse(cfEnv, url);
 		if (path === "/sitemap.xml") return sitemapResponse(cfEnv, url);
 		if (path === "/robots.txt") return robotsResponse(url);
+		if (path.startsWith("/og/") && path.endsWith(".svg")) return ogResponse(cfEnv, url);
 		if (path.startsWith("/media/")) return mediaResponse(cfEnv, url);
 
 		// Language: `/` → detected locale; legacy non-prefixed URLs → 301 to /<lang>/…

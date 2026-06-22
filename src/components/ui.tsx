@@ -2,33 +2,58 @@ import { Link, useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 import type { PostWithTerms } from "#/lib/content";
 import { type Locale, t } from "#/lib/i18n";
-import { logoutFn } from "#/lib/server";
+import { logoutFn, viewFn } from "#/lib/server";
 
 export const SITE = "allenlim.net";
 export const SITE_ORIGIN = "https://blog.allenlim.net";
 
-/** Builds a `head()` meta array: title + optional OG/description + hreflang alternates. */
+const abs = (path: string) => (path.startsWith("http") ? path : SITE_ORIGIN + path);
+
+/** Builds a `head()`: title, description, OG + Twitter cards, canonical, hreflang, JSON-LD. */
 export function pageHead(opts: {
 	title: string;
 	description?: string | null;
 	image?: string | null;
 	type?: "website" | "article";
 	robots?: string | null;
+	/** Path of this page (→ canonical + og:url). */
+	path?: string;
 	alternates?: Array<{ hreflang: string; path: string }>;
+	jsonLd?: Record<string, unknown>;
 }) {
+	const img = opts.image ? abs(opts.image) : null;
 	const meta: Array<Record<string, string>> = [
 		{ title: opts.title },
 		{ property: "og:title", content: opts.title },
 		{ property: "og:type", content: opts.type ?? "website" },
+		{ property: "og:site_name", content: SITE },
+		{ name: "twitter:card", content: img ? "summary_large_image" : "summary" },
+		{ name: "twitter:title", content: opts.title },
 	];
+	if (opts.path) meta.push({ property: "og:url", content: abs(opts.path) });
 	if (opts.description) {
 		meta.push({ name: "description", content: opts.description });
 		meta.push({ property: "og:description", content: opts.description });
+		meta.push({ name: "twitter:description", content: opts.description });
 	}
-	if (opts.image) meta.push({ property: "og:image", content: opts.image });
+	if (img) {
+		meta.push({ property: "og:image", content: img });
+		meta.push({ name: "twitter:image", content: img });
+	}
 	if (opts.robots) meta.push({ name: "robots", content: opts.robots });
-	const links = (opts.alternates ?? []).map((a) => ({ rel: "alternate", hrefLang: a.hreflang, href: SITE_ORIGIN + a.path }));
-	return links.length ? { meta, links } : { meta };
+
+	const links: Array<Record<string, string>> = [];
+	if (opts.path) links.push({ rel: "canonical", href: abs(opts.path) });
+	for (const a of opts.alternates ?? []) links.push({ rel: "alternate", hrefLang: a.hreflang, href: abs(a.path) });
+	// x-default → the English alternate, if any
+	const enAlt = opts.alternates?.find((a) => a.hreflang === "en");
+	if (enAlt) links.push({ rel: "alternate", hrefLang: "x-default", href: abs(enAlt.path) });
+
+	const scripts = opts.jsonLd
+		? [{ type: "application/ld+json", children: JSON.stringify(opts.jsonLd) }]
+		: undefined;
+
+	return { meta, ...(links.length ? { links } : {}), ...(scripts ? { scripts } : {}) };
 }
 
 export function useHighlight(dep: unknown) {
@@ -38,6 +63,37 @@ export function useHighlight(dep: unknown) {
 		const timer = setTimeout(run, 300);
 		return () => clearTimeout(timer);
 	}, [dep]);
+}
+
+/** Adds a Copy button to each code block. */
+export function useCodeCopy(dep: unknown) {
+	useEffect(() => {
+		const add = () => {
+			document.querySelectorAll<HTMLElement>(".prose pre").forEach((pre) => {
+				if (pre.querySelector(".copy-btn")) return;
+				const btn = document.createElement("button");
+				btn.type = "button";
+				btn.className = "copy-btn";
+				btn.textContent = "Copy";
+				btn.onclick = () => {
+					navigator.clipboard.writeText(pre.querySelector("code")?.textContent ?? pre.textContent ?? "");
+					btn.textContent = "Copied";
+					setTimeout(() => { btn.textContent = "Copy"; }, 1200);
+				};
+				pre.appendChild(btn);
+			});
+		};
+		add();
+		const t = setTimeout(add, 350);
+		return () => clearTimeout(t);
+	}, [dep]);
+}
+
+/** Records a view once per mount (prefetch on hover doesn't mount, so it isn't counted). */
+export function useView(id: string) {
+	useEffect(() => {
+		viewFn({ data: { id } }).catch(() => {});
+	}, [id]);
 }
 
 export interface Me {
@@ -189,6 +245,7 @@ export function AdminShell({ email, children }: { email?: string | null; childre
 					<Link to="/admin">Posts</Link>
 					<Link to="/admin/posts/new">New</Link>
 					<Link to="/admin/comments">Comments</Link>
+					<Link to="/admin/media">Media</Link>
 					<a href="/en" target="_blank" rel="noreferrer">View site ↗</a>
 				</div>
 				<div className="nav-right">

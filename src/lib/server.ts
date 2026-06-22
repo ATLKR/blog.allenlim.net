@@ -31,11 +31,14 @@ import {
 	getPrevNext,
 	getTerm,
 	getTranslationLocales,
+	incrementView,
 	isReachable,
+	listMedia,
 	listNavPages,
 	listPosts,
 	listTerms,
 	loadBody,
+	popularPosts,
 	relatedPosts,
 	searchPosts,
 	updatePost,
@@ -174,6 +177,17 @@ export const searchFn = createServerFn({ method: "GET" })
 		return { posts, q: data.q };
 	});
 
+export const popularFn = createServerFn({ method: "GET" })
+	.validator((d: { locale: Locale }) => d)
+	.handler(async ({ data }) => ({ posts: await popularPosts(getEnv(), data.locale, 5) }));
+
+export const viewFn = createServerFn({ method: "POST" })
+	.validator((d: { id: string }) => d)
+	.handler(async ({ data }) => {
+		await incrementView(getEnv(), data.id);
+		return { ok: true };
+	});
+
 export const termsFn = createServerFn({ method: "GET" })
 	.validator((d: { kind: "tags" | "categories" }) => d)
 	.handler(async ({ data }) => ({ terms: await listTerms(getEnv(), data.kind) }));
@@ -201,6 +215,11 @@ export const adminListFn = createServerFn({ method: "GET" }).handler(async () =>
 	const env = getEnv();
 	const posts = await listPosts(env, { includeHidden: true, type: "all", limit: 500 });
 	return { posts };
+});
+
+export const mediaListFn = createServerFn({ method: "GET" }).handler(async () => {
+	await requireUser();
+	return { media: await listMedia(getEnv(), 300) };
 });
 
 export const getEditFn = createServerFn({ method: "GET" })
