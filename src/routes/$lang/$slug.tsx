@@ -1,5 +1,5 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import { SITE, pageHead, useHighlight } from "#/components/ui";
+import { SITE, SITE_ORIGIN, pageHead, useCodeCopy, useHighlight } from "#/components/ui";
 import { type Locale, t } from "#/lib/i18n";
 import { getEntryFn } from "#/lib/server";
 
@@ -15,11 +15,21 @@ export const Route = createFileRoute("/$lang/$slug")({
 			? pageHead({
 					title: `${loaderData.post.title} — ${SITE}`,
 					description: loaderData.post.excerpt,
+					image: loaderData.post.cover_url ?? `/og/${loaderData.post.url_slug}.svg?l=${loaderData.post.locale}`,
 					robots: loaderData.post.visibility === "public" ? null : "noindex, nofollow",
+					path: `/${loaderData.post.locale}/${loaderData.post.url_slug}`,
 					alternates: [
 						{ hreflang: loaderData.post.locale, path: `/${loaderData.post.locale}/${loaderData.post.url_slug}` },
 						...loaderData.otherLocales.map((l) => ({ hreflang: l, path: `/${l}/${loaderData.post.url_slug}` })),
 					],
+					jsonLd: {
+						"@context": "https://schema.org",
+						"@type": "WebPage",
+						name: loaderData.post.title,
+						inLanguage: loaderData.post.locale,
+						url: `${SITE_ORIGIN}/${loaderData.post.locale}/${loaderData.post.url_slug}`,
+						...(loaderData.post.excerpt ? { description: loaderData.post.excerpt } : {}),
+					},
 				})
 			: {},
 	component: PageView,
@@ -30,6 +40,7 @@ function PageView() {
 	const { post, html, toc, otherLocales } = Route.useLoaderData();
 	const tr = t(locale);
 	useHighlight(post.id);
+	useCodeCopy(post.id);
 	return (
 		<article className="article">
 			{post.visibility !== "public" && <div className="banner">{tr.scheduledNote(post.visibility)}</div>}

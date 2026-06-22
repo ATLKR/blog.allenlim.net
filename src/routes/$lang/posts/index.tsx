@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PostCard, Pager } from "#/components/ui";
+import { PostCard, Pager, SITE, pageHead } from "#/components/ui";
 import { type Locale, t } from "#/lib/i18n";
 import { listFn } from "#/lib/server";
 
@@ -7,6 +7,7 @@ export const Route = createFileRoute("/$lang/posts/")({
 	validateSearch: (s: Record<string, unknown>): { page?: number } => ({ page: s.page ? Number(s.page) || 1 : undefined }),
 	loaderDeps: ({ search }) => ({ page: search.page ?? 1 }),
 	loader: ({ params, deps }) => listFn({ data: { locale: params.lang as Locale, type: "post", page: deps.page } }),
+	head: ({ params }) => pageHead({ title: `${t(params.lang as Locale).allPosts} — ${SITE}`, path: `/${params.lang}/posts` }),
 	component: Posts,
 });
 

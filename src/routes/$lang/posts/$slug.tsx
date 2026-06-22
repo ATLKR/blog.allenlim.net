@@ -1,6 +1,6 @@
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
 import { Comments } from "#/components/Comments";
-import { PostCard, SITE, fmtDate, pageHead, useHighlight } from "#/components/ui";
+import { PostCard, SITE, SITE_ORIGIN, fmtDate, pageHead, useCodeCopy, useHighlight, useView } from "#/components/ui";
 import { type Locale, t } from "#/lib/i18n";
 import { getEntryFn, listCommentsFn } from "#/lib/server";
 
@@ -16,13 +16,27 @@ export const Route = createFileRoute("/$lang/posts/$slug")({
 			? pageHead({
 					title: `${loaderData.post.title} — ${SITE}`,
 					description: loaderData.post.excerpt,
-					image: loaderData.post.cover_url,
+					image: loaderData.post.cover_url ?? `/og/posts/${loaderData.post.url_slug}.svg?l=${loaderData.post.locale}`,
 					type: "article",
 					robots: loaderData.post.visibility === "public" ? null : "noindex, nofollow",
+					path: `/${loaderData.post.locale}/posts/${loaderData.post.url_slug}`,
 					alternates: [
 						{ hreflang: loaderData.post.locale, path: `/${loaderData.post.locale}/posts/${loaderData.post.url_slug}` },
 						...loaderData.otherLocales.map((l) => ({ hreflang: l, path: `/${l}/posts/${loaderData.post.url_slug}` })),
 					],
+					jsonLd: {
+						"@context": "https://schema.org",
+						"@type": "BlogPosting",
+						headline: loaderData.post.title,
+						datePublished: loaderData.post.published_at ?? loaderData.post.created_at,
+						dateModified: loaderData.post.updated_at,
+						inLanguage: loaderData.post.locale,
+						author: { "@type": "Person", name: "Allen Lim", url: SITE_ORIGIN },
+						publisher: { "@type": "Organization", name: SITE },
+						mainEntityOfPage: `${SITE_ORIGIN}/${loaderData.post.locale}/posts/${loaderData.post.url_slug}`,
+						...(loaderData.post.excerpt ? { description: loaderData.post.excerpt } : {}),
+						...(loaderData.post.cover_url ? { image: SITE_ORIGIN + loaderData.post.cover_url } : {}),
+					},
 				})
 			: {},
 	component: PostView,
@@ -33,6 +47,8 @@ function PostView() {
 	const { post, html, toc, prev, next, related, comments, otherLocales } = Route.useLoaderData();
 	const tr = t(locale);
 	useHighlight(post.id);
+	useCodeCopy(post.id);
+	useView(post.id);
 	const date = fmtDate(post.published_at ?? post.created_at, locale);
 	return (
 		<article className="article">

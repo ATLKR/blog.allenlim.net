@@ -1,5 +1,5 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import { PostCard, Pager } from "#/components/ui";
+import { PostCard, Pager, SITE, pageHead } from "#/components/ui";
 import { type Locale, t } from "#/lib/i18n";
 import { termFn } from "#/lib/server";
 
@@ -11,6 +11,8 @@ export const Route = createFileRoute("/$lang/category/$slug")({
 		if ("notFound" in res) throw notFound();
 		return res;
 	},
+	head: ({ params, loaderData }) =>
+		pageHead({ title: loaderData && "term" in loaderData ? `${loaderData.term.label} — ${SITE}` : SITE, path: `/${params.lang}/category/${params.slug}` }),
 	component: CategoryView,
 });
 

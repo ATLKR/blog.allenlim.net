@@ -22,6 +22,7 @@ interface Strings {
 	postsCount: (n: number) => string;
 	resultsFor: (n: number, q: string) => string;
 	noPosts: string;
+	popular: string;
 	minRead: (n: number) => string;
 	contents: string;
 	related: string;
@@ -59,6 +60,7 @@ const en: Strings = {
 	postsCount: (n) => `${n} ${n === 1 ? "post" : "posts"}`,
 	resultsFor: (n, q) => `${n} result${n === 1 ? "" : "s"} for “${q}”`,
 	noPosts: "No posts published yet.",
+	popular: "Popular",
 	minRead: (n) => `${n} min read`,
 	contents: "Contents",
 	related: "Related",
@@ -96,6 +98,7 @@ const ko: Strings = {
 	postsCount: (n) => `글 ${n}개`,
 	resultsFor: (n, q) => `“${q}” 검색 결과 ${n}개`,
 	noPosts: "아직 발행된 글이 없습니다.",
+	popular: "인기 글",
 	minRead: (n) => `${n}분 읽기`,
 	contents: "목차",
 	related: "관련 글",

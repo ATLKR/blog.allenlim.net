@@ -22,8 +22,10 @@ holds only metadata so the 10 GB limit never bites.
 - Admin: first-run setup, login, dashboard, comment moderation, and a friendly
   two-pane Markdown editor (toolbar, live preview, drag/paste image upload,
   auto-slug, ⌘/Ctrl+S save, unsaved-changes guard)
-- Reading-progress bar, hreflang alternates, RSS autodiscovery, skip-to-content,
-  favicon, and a localized 404
+- SEO: self-canonical, JSON-LD (BlogPosting/WebPage), Open Graph + Twitter
+  cards, hreflang + x-default, dynamic SVG share cards (`/og/…`)
+- View counts → "Popular" list; code-block copy buttons; admin media library
+- Reading-progress bar, RSS autodiscovery, skip-to-content, favicon, localized 404
 - Bilingual (English / 한국어) with locale subdirectories: `/en/…` and `/ko/…`,
   `/` redirects to the browser-detected locale, and translations share a URL
   slug (`/en/resume` ↔ `/ko/resume`) with hreflang alternates. Old non-prefixed

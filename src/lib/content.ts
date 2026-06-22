@@ -374,6 +374,30 @@ export async function listTerms(env: Env, kind: "tags" | "categories"): Promise<
 	return results ?? [];
 }
 
+export async function incrementView(env: Env, id: string): Promise<void> {
+	await env.DB.prepare("UPDATE posts SET views = views + 1 WHERE id = ?").bind(id).run();
+}
+
+/** Most-viewed public posts in a locale. */
+export async function popularPosts(env: Env, locale: string, limit = 5): Promise<PostWithTerms[]> {
+	const { results } = await env.DB.prepare(
+		`SELECT * FROM posts WHERE type = 'post' AND locale = ? AND ${PUBLIC_LIVE} AND views > 0 ORDER BY views DESC LIMIT ?`,
+	)
+		.bind(locale, limit)
+		.all<PostRow>();
+	return hydrateTerms(env, results ?? []);
+}
+
+/** Catalog of uploaded media (admin library). */
+export async function listMedia(env: Env, limit = 200) {
+	const { results } = await env.DB.prepare(
+		"SELECT id, key, filename, mime, size, created_at FROM media ORDER BY created_at DESC LIMIT ?",
+	)
+		.bind(limit)
+		.all<{ id: string; key: string; filename: string; mime: string; size: number; created_at: string }>();
+	return results ?? [];
+}
+
 /** Which locales of this url_slug are publicly reachable (for the language switcher). */
 export async function getTranslationLocales(env: Env, urlSlug: string): Promise<string[]> {
 	const { results } = await env.DB.prepare(

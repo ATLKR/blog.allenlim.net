@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PostCard } from "#/components/ui";
+import { PostCard, SITE, pageHead } from "#/components/ui";
 import { type Locale, t } from "#/lib/i18n";
 import { searchFn } from "#/lib/server";
 
@@ -8,6 +8,7 @@ export const Route = createFileRoute("/$lang/search")({
 	loaderDeps: ({ search }) => ({ q: search.q }),
 	loader: ({ params, deps }) =>
 		deps.q ? searchFn({ data: { q: deps.q, locale: params.lang as Locale } }) : { posts: [], q: "" },
+	head: ({ params }) => pageHead({ title: `${t(params.lang as Locale).search} — ${SITE}`, path: `/${params.lang}/search`, robots: "noindex" }),
 	component: Search,
 });
 
