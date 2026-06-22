@@ -5,9 +5,17 @@ import { type Locale, t } from "#/lib/i18n";
 import { logoutFn, setLangFn } from "#/lib/server";
 
 export const SITE = "allenlim.net";
+export const SITE_ORIGIN = "https://blog.allenlim.net";
 
-/** Builds a `head()` meta array: title + optional OG/description tags. */
-export function pageHead(opts: { title: string; description?: string | null; image?: string | null; type?: "website" | "article"; robots?: string | null }) {
+/** Builds a `head()` meta array: title + optional OG/description + hreflang alternates. */
+export function pageHead(opts: {
+	title: string;
+	description?: string | null;
+	image?: string | null;
+	type?: "website" | "article";
+	robots?: string | null;
+	alternates?: Array<{ hreflang: string; path: string }>;
+}) {
 	const meta: Array<Record<string, string>> = [
 		{ title: opts.title },
 		{ property: "og:title", content: opts.title },
@@ -19,7 +27,12 @@ export function pageHead(opts: { title: string; description?: string | null; ima
 	}
 	if (opts.image) meta.push({ property: "og:image", content: opts.image });
 	if (opts.robots) meta.push({ name: "robots", content: opts.robots });
-	return { meta };
+	const links = (opts.alternates ?? []).map((a) => ({
+		rel: "alternate",
+		hrefLang: a.hreflang,
+		href: SITE_ORIGIN + a.path,
+	}));
+	return links.length ? { meta, links } : { meta };
 }
 
 /** Runs highlight.js over rendered markdown after mount. */
@@ -115,7 +128,7 @@ export function SiteLayout({ me, children }: { me: Me; children: React.ReactNode
 					</div>
 				</nav>
 			</header>
-			<main>{children}</main>
+			<main id="main">{children}</main>
 			<footer className="footer">
 				<div className="footer-inner">
 					<span>© {new Date().getFullYear()} {me.identity.title}

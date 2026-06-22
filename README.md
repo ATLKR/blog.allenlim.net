@@ -19,7 +19,11 @@ holds only metadata so the 10 GB limit never bites.
 - Reading time, table of contents, prev/next, related posts
 - Comments with Cloudflare Turnstile + KV rate-limiting (guest now,
   member-ready schema), moderated from the admin
-- Admin: first-run setup, login, dashboard, markdown editor, comment moderation
+- Admin: first-run setup, login, dashboard, comment moderation, and a friendly
+  two-pane Markdown editor (toolbar, live preview, drag/paste image upload,
+  auto-slug, ⌘/Ctrl+S save, unsaved-changes guard)
+- Reading-progress bar, hreflang alternates, RSS autodiscovery, skip-to-content,
+  favicon, and a localized 404
 - Bilingual (English / 한국어): browser-language detection + manual toggle for
   the UI, and per-entry locale with linked translations (the language switch
   swaps to the other-language version, falling back to the original)

@@ -16,6 +16,10 @@ export const Route = createFileRoute("/$slug")({
 					title: `${loaderData.post.title} — ${SITE}`,
 					description: loaderData.post.excerpt,
 					robots: loaderData.post.visibility === "public" ? null : "noindex, nofollow",
+					alternates: [
+						{ hreflang: loaderData.post.locale, path: `/${loaderData.post.slug}` },
+						...loaderData.translations.map((tl) => ({ hreflang: tl.locale, path: `/${tl.slug}` })),
+					],
 				})
 			: {},
 	component: PageView,
