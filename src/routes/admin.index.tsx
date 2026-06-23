@@ -1,4 +1,5 @@
 import { Link, createFileRoute, redirect } from "@tanstack/react-router";
+import { useState } from "react";
 import { AdminShell, fmtDate } from "#/components/ui";
 import type { PostWithTerms } from "#/lib/content";
 import { LOCALES } from "#/lib/i18n";
@@ -36,22 +37,43 @@ function group(posts: PostWithTerms[]): Group[] {
 		.sort((a, b) => (a.updated < b.updated ? 1 : -1));
 }
 
+const FILTERS = [
+	{ key: "all", label: "All" },
+	{ key: "post", label: "Posts" },
+	{ key: "page", label: "Pages" },
+	{ key: "public", label: "Published" },
+	{ key: "draft", label: "Drafts" },
+] as const;
+type FilterKey = (typeof FILTERS)[number]["key"];
+
+function matches(g: Group, f: FilterKey): boolean {
+	if (f === "all") return true;
+	if (f === "post" || f === "page") return g.rep.type === f;
+	return [...g.byLocale.values()].some((e) => e.visibility === f);
+}
+
 function Dashboard() {
 	const { me } = Route.useRouteContext();
 	const { posts } = Route.useLoaderData();
-	const groups = group(posts);
-	const counts = posts.reduce<Record<string, number>>((a, p) => ((a[p.visibility] = (a[p.visibility] ?? 0) + 1), a), {});
+	const [filter, setFilter] = useState<FilterKey>("all");
+	const allGroups = group(posts);
+	const groups = allGroups.filter((g) => matches(g, filter));
 	return (
 		<AdminShell email={me.user?.email}>
-			<div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem" }}>
-				<div>
-					<h1 style={{ fontSize: "1.6rem" }}>Entries</h1>
-					<p className="muted" style={{ fontSize: ".85rem", marginTop: ".3rem" }}>
-						{groups.length} {groups.length === 1 ? "entry" : "entries"} · {posts.length} translations · {counts.public ?? 0} public · {counts.draft ?? 0} draft
-					</p>
-				</div>
-				<Link to="/admin/posts/new" className="btn">New</Link>
+			<div className="page-head">
+				<h1>Entries</h1>
+				<Link to="/admin/posts/new" className="btn">New entry</Link>
 			</div>
+			<div className="filters">
+				{FILTERS.map((f) => (
+					<button key={f.key} type="button" className={`filter ${filter === f.key ? "active" : ""}`} onClick={() => setFilter(f.key)}>
+						{f.label} <span className="n">{allGroups.filter((g) => matches(g, f.key)).length}</span>
+					</button>
+				))}
+			</div>
+			{groups.length === 0 ? (
+				<p className="muted" style={{ marginTop: "2rem" }}>Nothing here yet.</p>
+			) : (
 			<table className="tbl">
 				<thead>
 					<tr><th>Title</th><th>Languages</th><th>Type</th><th>Updated</th></tr>
@@ -72,7 +94,9 @@ function Dashboard() {
 												{loc.toUpperCase()}
 											</Link>
 										) : (
-											<span key={loc} className="langchip missing" title={`${loc.toUpperCase()} — not translated`}>{loc.toUpperCase()}</span>
+											<Link key={loc} to="/admin/posts/new" search={{ translationOf: g.rep.slug, lang: loc }} className="langchip missing" title={`${loc.toUpperCase()} — add translation`}>
+												+{loc.toUpperCase()}
+											</Link>
 										);
 									})}
 								</div>
@@ -83,6 +107,7 @@ function Dashboard() {
 					))}
 				</tbody>
 			</table>
+			)}
 		</AdminShell>
 	);
 }

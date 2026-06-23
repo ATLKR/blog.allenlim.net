@@ -222,6 +222,28 @@ export const mediaListFn = createServerFn({ method: "GET" }).handler(async () =>
 	return { media: await listMedia(getEnv(), 300) };
 });
 
+/** Source fields for starting a translation (prefills the editor). */
+export const prefillFn = createServerFn({ method: "GET" })
+	.validator((d: { slug: string }) => d)
+	.handler(async ({ data }) => {
+		await requireUser();
+		const env = getEnv();
+		const row = await env.DB.prepare("SELECT id FROM posts WHERE slug = ?").bind(data.slug).first<{ id: string }>();
+		if (!row) return { source: null };
+		const meta = await getPostMetaById(env, row.id);
+		if (!meta) return { source: null };
+		return {
+			source: {
+				title: meta.title,
+				slug: meta.url_slug,
+				body: await loadBody(env, meta),
+				tags: meta.tags.map((t) => t.label),
+				categories: meta.categories.map((c) => c.label),
+				cover_url: meta.cover_url,
+			},
+		};
+	});
+
 export const getEditFn = createServerFn({ method: "GET" })
 	.validator((d: { id: string }) => d)
 	.handler(async ({ data }) => {

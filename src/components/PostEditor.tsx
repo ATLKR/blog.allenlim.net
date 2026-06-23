@@ -32,22 +32,33 @@ const TOOLBAR: TbBtn[] = [
 	{ label: "Link", title: "Link", wrap: ["[", "](https://)", "text"] },
 ];
 
-export function PostEditor({ existing, body: initialBody }: { existing?: PostWithTerms; body?: string }) {
+export interface EditorDefaults {
+	title?: string;
+	slug?: string;
+	locale?: string;
+	translationOf?: string;
+	body?: string;
+	tags?: string[];
+	categories?: string[];
+	cover_url?: string | null;
+}
+
+export function PostEditor({ existing, body: initialBody, defaults }: { existing?: PostWithTerms; body?: string; defaults?: EditorDefaults }) {
 	const router = useRouter();
 	const [f, setF] = useState({
-		title: existing?.title ?? "",
-		slug: existing?.url_slug ?? "",
+		title: existing?.title ?? defaults?.title ?? "",
+		slug: existing?.url_slug ?? defaults?.slug ?? "",
 		type: existing?.type ?? "post",
 		visibility: existing?.visibility ?? "draft",
 		pinned: !!existing?.pinned,
-		cover_url: existing?.cover_url ?? "",
+		cover_url: existing?.cover_url ?? defaults?.cover_url ?? "",
 		excerpt: existing?.excerpt ?? "",
 		publishedAt: existing?.published_at ? existing.published_at.slice(0, 16) : "",
-		locale: existing?.locale ?? "en",
-		translationOf: "",
-		tags: existing?.tags.map((t) => t.label).join(", ") ?? "",
-		categories: existing?.categories.map((c) => c.label).join(", ") ?? "",
-		body: initialBody ?? "",
+		locale: existing?.locale ?? defaults?.locale ?? "en",
+		translationOf: defaults?.translationOf ?? "",
+		tags: existing?.tags.map((t) => t.label).join(", ") ?? defaults?.tags?.join(", ") ?? "",
+		categories: existing?.categories.map((c) => c.label).join(", ") ?? defaults?.categories?.join(", ") ?? "",
+		body: initialBody ?? defaults?.body ?? "",
 	});
 	const [msg, setMsg] = useState<string | null>(null);
 	const [saving, setSaving] = useState(false);

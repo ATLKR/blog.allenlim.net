@@ -239,21 +239,22 @@ export function Pager({ page, pages, build }: { page: number; pages: number; bui
 
 export function AdminShell({ email, children }: { email?: string | null; children: React.ReactNode }) {
 	return (
-		<div>
-			<header className="admin-header">
-				<div className="links">
-					<Link to="/admin">Posts</Link>
-					<Link to="/admin/posts/new">New</Link>
-					<Link to="/admin/comments">Comments</Link>
-					<Link to="/admin/media">Media</Link>
+		<div className="admin-layout">
+			<aside className="admin-sidebar">
+				<div className="admin-brand">✦ {SITE}</div>
+				<nav className="admin-nav">
+					<Link to="/admin" activeOptions={{ exact: true }} activeProps={{ className: "active" }}>Entries</Link>
+					<Link to="/admin/posts/new" activeProps={{ className: "active" }}>New entry</Link>
+					<Link to="/admin/media" activeProps={{ className: "active" }}>Media</Link>
+					<Link to="/admin/comments" activeProps={{ className: "active" }}>Comments</Link>
+				</nav>
+				<div className="admin-side-foot">
 					<a href="/en" target="_blank" rel="noreferrer">View site ↗</a>
-				</div>
-				<div className="nav-right">
-					{email && <span className="muted" style={{ fontSize: ".85rem" }}>{email}</span>}
+					{email && <span className="who">{email}</span>}
 					<LogoutButton />
 				</div>
-			</header>
-			<div className="admin-main">{children}</div>
+			</aside>
+			<div className="admin-content">{children}</div>
 		</div>
 	);
 }
