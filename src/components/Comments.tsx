@@ -23,12 +23,14 @@ export function Comments({
 	siteKey,
 	member,
 	locale = "en",
+	enabled = true,
 }: {
 	postId: string;
 	initial: CommentItem[];
 	siteKey: string;
 	member: { name: string } | null;
 	locale?: Locale;
+	enabled?: boolean;
 }) {
 	const tr = t(locale);
 	const [comments, setComments] = useState<CommentItem[]>(initial);
@@ -66,9 +68,13 @@ export function Comments({
 			window.turnstile?.reset(widgetRef.current ?? undefined);
 			return;
 		}
-		setComments((c) => [...c, res.comment!]);
 		setBody("");
-		setMsg(tr.posted);
+		if ("pending" in res && res.pending) {
+			setMsg(tr.pending);
+		} else if (res.comment) {
+			setComments((c) => [...c, res.comment!]);
+			setMsg(tr.posted);
+		}
 		window.turnstile?.reset(widgetRef.current ?? undefined);
 	}
 
@@ -88,6 +94,9 @@ export function Comments({
 				))}
 			</ul>
 
+			{!enabled ? (
+				<p className="muted">{tr.commentsClosed}</p>
+			) : (
 			<form className="comment-form" onSubmit={submit}>
 				<h3>{tr.leaveComment}</h3>
 				{msg && <div className={`notice${msg === tr.posted ? "" : " error"}`}>{msg}</div>}
@@ -102,6 +111,7 @@ export function Comments({
 				{!member && siteKey && <div ref={widgetRef} className="cf-turnstile" data-sitekey={siteKey} style={{ marginBottom: "1rem" }} />}
 				<button type="submit" className="btn" disabled={busy}>{busy ? tr.posting : tr.postComment}</button>
 			</form>
+			)}
 		</section>
 	);
 }

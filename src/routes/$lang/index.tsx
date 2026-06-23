@@ -26,7 +26,7 @@ function Home() {
 				<h1>{me.identity.title}</h1>
 				<p>{me.identity.tagline}</p>
 			</header>
-			{popular.length > 0 && (
+			{me.settings.showPopular && popular.length > 0 && (
 				<section className="popular">
 					<h2 className="section-label">{tr.popular}</h2>
 					<ul>

@@ -15,8 +15,8 @@ export const Route = createFileRoute("/$lang/posts/$slug")({
 		loaderData && "post" in loaderData
 			? pageHead({
 					title: `${loaderData.post.title} — ${SITE}`,
-					description: loaderData.post.excerpt,
-					image: loaderData.post.cover_url ?? `/og/posts/${loaderData.post.url_slug}.svg?l=${loaderData.post.locale}`,
+					description: loaderData.seo.description,
+					image: loaderData.seo.ogImage ?? `/og/posts/${loaderData.post.url_slug}.svg?l=${loaderData.post.locale}`,
 					type: "article",
 					robots: loaderData.post.visibility === "public" ? null : "noindex, nofollow",
 					path: `/${loaderData.post.locale}/posts/${loaderData.post.url_slug}`,
@@ -31,10 +31,10 @@ export const Route = createFileRoute("/$lang/posts/$slug")({
 						datePublished: loaderData.post.published_at ?? loaderData.post.created_at,
 						dateModified: loaderData.post.updated_at,
 						inLanguage: loaderData.post.locale,
-						author: { "@type": "Person", name: "Allen Lim", url: SITE_ORIGIN },
+						author: { "@type": "Person", name: loaderData.seo.author, url: SITE_ORIGIN, ...(loaderData.seo.sameAs.length ? { sameAs: loaderData.seo.sameAs } : {}) },
 						publisher: { "@type": "Organization", name: SITE },
 						mainEntityOfPage: `${SITE_ORIGIN}/${loaderData.post.locale}/posts/${loaderData.post.url_slug}`,
-						...(loaderData.post.excerpt ? { description: loaderData.post.excerpt } : {}),
+						...(loaderData.seo.description ? { description: loaderData.seo.description } : {}),
 						...(loaderData.post.cover_url ? { image: SITE_ORIGIN + loaderData.post.cover_url } : {}),
 					},
 				})
@@ -113,7 +113,7 @@ function PostView() {
 				</section>
 			)}
 
-			<Comments postId={post.id} initial={comments.comments} siteKey={comments.siteKey} member={comments.member} locale={locale} />
+			<Comments postId={post.id} initial={comments.comments} siteKey={comments.siteKey} member={comments.member} enabled={comments.enabled} locale={locale} />
 		</article>
 	);
 }

@@ -35,6 +35,8 @@ interface Strings {
 	postComment: string;
 	posting: string;
 	posted: string;
+	pending: string;
+	commentsClosed: string;
 	captchaIncomplete: string;
 	commentingAs: string;
 	notFound: string;
@@ -73,6 +75,8 @@ const en: Strings = {
 	postComment: "Post comment",
 	posting: "Posting…",
 	posted: "Posted.",
+	pending: "Thanks! Your comment will appear after review.",
+	commentsClosed: "Comments are closed.",
 	captchaIncomplete: "Please complete the captcha.",
 	commentingAs: "Commenting as",
 	notFound: "Page not found",
@@ -111,6 +115,8 @@ const ko: Strings = {
 	postComment: "댓글 등록",
 	posting: "등록 중…",
 	posted: "등록되었습니다.",
+	pending: "감사합니다! 검토 후 게시됩니다.",
+	commentsClosed: "댓글이 닫혀 있습니다.",
 	captchaIncomplete: "캡차를 완료해 주세요.",
 	commentingAs: "작성자",
 	notFound: "페이지를 찾을 수 없습니다",

@@ -14,8 +14,8 @@ export const Route = createFileRoute("/$lang/$slug")({
 		loaderData && "post" in loaderData
 			? pageHead({
 					title: `${loaderData.post.title} — ${SITE}`,
-					description: loaderData.post.excerpt,
-					image: loaderData.post.cover_url ?? `/og/${loaderData.post.url_slug}.svg?l=${loaderData.post.locale}`,
+					description: loaderData.seo.description,
+					image: loaderData.seo.ogImage ?? `/og/${loaderData.post.url_slug}.svg?l=${loaderData.post.locale}`,
 					robots: loaderData.post.visibility === "public" ? null : "noindex, nofollow",
 					path: `/${loaderData.post.locale}/${loaderData.post.url_slug}`,
 					alternates: [

@@ -46,6 +46,7 @@ import {
 import { type ContentType, type Visibility, VISIBILITIES, countUsers, getUserByEmail, nowIso } from "./db";
 import { getEnv } from "./env";
 import { renderWithToc } from "./markdown";
+import { type SiteSettings, getSettings, publicSettings, saveSettings } from "./settings";
 import { getSiteIdentity } from "./site";
 import { newId } from "./slug";
 
@@ -76,13 +77,31 @@ async function requireUser(): Promise<SessionUser> {
 
 export const meFn = createServerFn({ method: "GET" }).handler(async () => {
 	const env = getEnv();
-	const [user, identity, needsSetup] = await Promise.all([
+	const [user, settings, needsSetup] = await Promise.all([
 		currentUser(),
-		getSiteIdentity(env),
+		getSettings(env),
 		countUsers(env).then((n) => n === 0),
 	]);
-	return { user, identity, needsSetup };
+	return {
+		user,
+		needsSetup,
+		identity: { title: settings.site_title, tagline: settings.site_tagline },
+		settings: publicSettings(settings),
+	};
 });
+
+export const settingsFn = createServerFn({ method: "GET" }).handler(async () => {
+	await requireUser();
+	return { settings: await getSettings(getEnv()) };
+});
+
+export const saveSettingsFn = createServerFn({ method: "POST" })
+	.validator((d: Partial<SiteSettings>) => d)
+	.handler(async ({ data }) => {
+		await requireUser();
+		await saveSettings(getEnv(), data);
+		return { ok: true };
+	});
 
 /** Nav pages for a given locale (used by the /$lang layout). */
 export const navFn = createServerFn({ method: "GET" })
@@ -135,12 +154,13 @@ export const listFn = createServerFn({ method: "GET" })
 	.handler(async ({ data }) => {
 		const env = getEnv();
 		const page = Math.max(1, data.page ?? 1);
+		const PAGE = (await getSettings(env)).posts_per_page;
 		const opts = { type: data.type ?? "post", tag: data.tag, category: data.category, locale: data.locale, pinnedFirst: true } as const;
 		const [posts, total] = await Promise.all([
-			listPosts(env, { ...opts, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
+			listPosts(env, { ...opts, limit: PAGE, offset: (page - 1) * PAGE }),
 			countPosts(env, opts),
 		]);
-		return { posts, total, page, pageSize: PAGE_SIZE, pages: Math.max(1, Math.ceil(total / PAGE_SIZE)) };
+		return { posts, total, page, pageSize: PAGE, pages: Math.max(1, Math.ceil(total / PAGE)) };
 	});
 
 export const getEntryFn = createServerFn({ method: "GET" })
@@ -152,11 +172,13 @@ export const getEntryFn = createServerFn({ method: "GET" })
 		if (!post || !isReachable(post, !!user)) return { notFound: true as const };
 		const body = await loadBody(env, post);
 		const { html, toc } = renderWithToc(body);
-		const [{ prev, next }, related, locales] = await Promise.all([
+		const [{ prev, next }, related, locales, settings] = await Promise.all([
 			getPrevNext(env, post),
 			post.type === "post" ? relatedPosts(env, post, 3) : Promise.resolve([]),
 			getTranslationLocales(env, post.url_slug),
+			getSettings(env),
 		]);
+		const sameAs = [settings.social_github, settings.social_x, settings.social_linkedin].filter(Boolean);
 		return {
 			post,
 			html,
@@ -165,8 +187,13 @@ export const getEntryFn = createServerFn({ method: "GET" })
 			next,
 			related,
 			isAdmin: !!user,
-			// other-language versions available at the same url_slug
 			otherLocales: locales.filter((l) => l !== post.locale),
+			seo: {
+				author: settings.author_name,
+				description: post.excerpt || settings.default_description || null,
+				ogImage: post.cover_url || settings.default_og_image || null,
+				sameAs,
+			},
 		};
 	});
 
@@ -200,12 +227,13 @@ export const termFn = createServerFn({ method: "GET" })
 		if (!term) return { notFound: true as const };
 		const key = data.kind === "tags" ? "tag" : "category";
 		const page = Math.max(1, data.page ?? 1);
+		const PAGE = (await getSettings(env)).posts_per_page;
 		const opts = { [key]: data.slug, locale: data.locale, pinnedFirst: true } as const;
 		const [posts, total] = await Promise.all([
-			listPosts(env, { ...opts, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
+			listPosts(env, { ...opts, limit: PAGE, offset: (page - 1) * PAGE }),
 			countPosts(env, opts),
 		]);
-		return { term, posts, total, page, pages: Math.max(1, Math.ceil(total / PAGE_SIZE)) };
+		return { term, posts, total, page, pages: Math.max(1, Math.ceil(total / PAGE)) };
 	});
 
 // --- admin ---
@@ -311,11 +339,12 @@ export const listCommentsFn = createServerFn({ method: "GET" })
 	.validator((d: { postId: string }) => d)
 	.handler(async ({ data }) => {
 		const env = getEnv();
-		const [comments, user] = await Promise.all([listComments(env, data.postId), currentUser()]);
+		const [comments, user, settings] = await Promise.all([listComments(env, data.postId), currentUser(), getSettings(env)]);
 		return {
 			comments,
 			siteKey: env.TURNSTILE_SITEKEY ?? "",
 			member: user ? { name: user.name || user.email } : null,
+			enabled: settings.comments_enabled,
 		};
 	});
 
@@ -323,6 +352,8 @@ export const addCommentFn = createServerFn({ method: "POST" })
 	.validator((d: { postId: string; name: string; email?: string; body: string; token: string }) => d)
 	.handler(async ({ data }) => {
 		const env = getEnv();
+		const settings = await getSettings(env);
+		if (!settings.comments_enabled) return { ok: false, error: "Comments are disabled." };
 		const user = await currentUser();
 		const post = await getPostMetaById(env, data.postId);
 		if (!post || !isReachable(post, !!user)) return { ok: false, error: "Post not found." };
@@ -333,14 +364,18 @@ export const addCommentFn = createServerFn({ method: "POST" })
 		if (body.length < 2) return { ok: false, error: "Comment is too short." };
 		if (body.length > 5000) return { ok: false, error: "Comment is too long." };
 
+		// Logged-in members post immediately; guests obey the moderation setting.
+		const hold = !user && settings.comments_moderation === "hold";
+		const status = hold ? "pending" : "published";
+
 		if (!user) {
 			const ip = getRequestIP({ xForwardedFor: true }) ?? "0.0.0.0";
 			const ipHash = await hashIp(ip);
 			if (!(await checkRate(env, ipHash))) return { ok: false, error: "Too many comments — please wait a minute." };
 			if (!data.token || !(await verifyTurnstile(env, data.token, ip)))
 				return { ok: false, error: "Captcha verification failed. Please try again." };
-			const comment = await insertComment(env, { postId: data.postId, authorName: name, email: data.email || null, body, ipHash });
-			return { ok: true, comment };
+			const comment = await insertComment(env, { postId: data.postId, authorName: name, email: data.email || null, body, ipHash }, status);
+			return hold ? { ok: true, pending: true as const } : { ok: true, comment };
 		}
 		const comment = await insertComment(env, { postId: data.postId, authorName: name, body, userId: user.id });
 		return { ok: true, comment };

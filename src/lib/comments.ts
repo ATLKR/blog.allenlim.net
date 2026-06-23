@@ -79,13 +79,13 @@ export interface AddCommentArgs {
 	ipHash?: string | null;
 }
 
-export async function insertComment(env: Env, a: AddCommentArgs): Promise<PublicComment> {
+export async function insertComment(env: Env, a: AddCommentArgs, status = "published"): Promise<PublicComment> {
 	const id = newId();
 	const ts = nowIso();
 	await env.DB.prepare(
-		"INSERT INTO comments (id, post_id, user_id, author_name, author_email, body, status, ip_hash, created_at) VALUES (?,?,?,?,?,?, 'published', ?, ?)",
+		"INSERT INTO comments (id, post_id, user_id, author_name, author_email, body, status, ip_hash, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
 	)
-		.bind(id, a.postId, a.userId ?? null, a.authorName, a.email ?? null, a.body, a.ipHash ?? null, ts)
+		.bind(id, a.postId, a.userId ?? null, a.authorName, a.email ?? null, a.body, status, a.ipHash ?? null, ts)
 		.run();
 	return { id, author_name: a.authorName, body: a.body, created_at: ts, is_member: !!a.userId };
 }

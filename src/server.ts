@@ -10,6 +10,7 @@ import {
 } from "#/lib/feeds";
 import { resolveLocale } from "#/lib/i18n";
 import { ogResponse } from "#/lib/og";
+import { getSettings } from "#/lib/settings";
 
 const startFetch = createStartHandler(defaultStreamHandler);
 const cfEnv = env as unknown as Env;
@@ -31,7 +32,11 @@ export default {
 		// Language: `/` → detected locale; legacy non-prefixed URLs → 301 to /<lang>/…
 		if (request.method === "GET") {
 			const lang = resolveLocale(request.headers.get("accept-language"), null);
-			if (path === "/") return redirect(`/${lang}`);
+			if (path === "/") {
+				const accept = request.headers.get("accept-language") || "";
+				const def = /(^|,|\s)ko\b/i.test(accept) ? "ko" : (await getSettings(cfEnv)).default_locale;
+				return redirect(`/${def}`);
+			}
 			if (path === "/resume") return redirect("/en/resume", 301);
 			if (path === "/resume-ko") return redirect("/ko/resume", 301);
 			if (/^\/(posts|tag|category|tags|search)(\/|$)/.test(path))

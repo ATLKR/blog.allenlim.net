@@ -101,6 +101,12 @@ export interface Me {
 	identity: { title: string; tagline: string };
 	locale: Locale;
 	navPages: Array<{ url_slug: string; title: string }>;
+	settings: {
+		defaultLocale: Locale;
+		showPopular: boolean;
+		commentsEnabled: boolean;
+		social: { github: string; x: string; linkedin: string; email: string };
+	};
 }
 
 export function fmtDate(value?: string | null, locale: Locale = "en") {
@@ -189,6 +195,22 @@ export function SiteLayout({ me, children }: { me: Me; children: React.ReactNode
 						<a href="/admin">{me.user ? tr.admin : tr.login}</a>
 					</span>
 					<div className="footer-controls">
+						{(() => {
+							const s = me.settings.social;
+							const links = [
+								s.github && { label: "GitHub", href: s.github },
+								s.x && { label: "X", href: s.x },
+								s.linkedin && { label: "LinkedIn", href: s.linkedin },
+								s.email && { label: "Email", href: `mailto:${s.email}` },
+							].filter(Boolean) as Array<{ label: string; href: string }>;
+							return links.length ? (
+								<span className="social">
+									{links.map((l) => (
+										<a key={l.label} href={l.href} target={l.href.startsWith("mailto") ? undefined : "_blank"} rel="noreferrer">{l.label}</a>
+									))}
+								</span>
+							) : null;
+						})()}
 						<LangSwitch locale={me.locale} />
 						<ThemeSwitch />
 					</div>
@@ -247,6 +269,7 @@ export function AdminShell({ email, children }: { email?: string | null; childre
 					<Link to="/admin/posts/new" activeProps={{ className: "active" }}>New entry</Link>
 					<Link to="/admin/media" activeProps={{ className: "active" }}>Media</Link>
 					<Link to="/admin/comments" activeProps={{ className: "active" }}>Comments</Link>
+					<Link to="/admin/settings" activeProps={{ className: "active" }}>Settings</Link>
 				</nav>
 				<div className="admin-side-foot">
 					<a href="/en" target="_blank" rel="noreferrer">View site ↗</a>
