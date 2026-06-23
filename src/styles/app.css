@@ -259,6 +259,14 @@ textarea { font-family: var(--font-mono); line-height: 1.6; resize: vertical; }
 .tbl th { text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-muted); padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--color-border); }
 .tbl td { padding: var(--sp-3); border-bottom: 1px solid var(--color-border); vertical-align: top; }
 .actions { display: flex; gap: var(--sp-3); align-items: center; margin-top: var(--sp-4); }
+.langchips { display: flex; gap: 6px; }
+.langchip { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.03em; padding: 2px 8px; border-radius: 4px; border: 1px solid var(--color-border); color: var(--color-text-secondary); text-decoration: none; }
+a.langchip:hover { background: var(--color-surface); }
+.langchip.public { border-color: #15803d; color: #15803d; }
+.langchip.draft { border-color: #b45309; color: #b45309; }
+.langchip.private { border-color: var(--color-danger); color: var(--color-danger); }
+.langchip.unlisted { border-color: #8b5cf6; color: #8b5cf6; }
+.langchip.missing { opacity: 0.4; border-style: dashed; }
 
 /* comments */
 .comments { margin-top: var(--sp-16); padding-top: var(--sp-8); border-top: 1px solid var(--color-border); }
