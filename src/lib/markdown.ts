@@ -19,10 +19,29 @@ export function renderMarkdown(md: string): string {
 }
 
 /** Render markdown, injecting heading ids and returning a table of contents. */
+const CALLOUTS: Record<string, { label: string; icon: string }> = {
+	note: { label: "Note", icon: "ℹ" },
+	tip: { label: "Tip", icon: "✓" },
+	important: { label: "Important", icon: "★" },
+	warning: { label: "Warning", icon: "⚠" },
+	caution: { label: "Caution", icon: "⛔" },
+};
+
 export function renderWithToc(md: string): { html: string; toc: TocItem[] } {
 	const toc: TocItem[] = [];
 	const seen = new Set<string>();
 	let html = renderMarkdown(md);
+
+	// GitHub-style callouts: > [!NOTE] … → styled box
+	html = html.replace(
+		/<blockquote>\s*<p>\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*(?:<br\s*\/?>)?\s*([\s\S]*?)<\/p>\s*<\/blockquote>/gi,
+		(_m, type: string, rest: string) => {
+			const c = CALLOUTS[type.toLowerCase()] ?? CALLOUTS.note;
+			return `<div class="callout ${type.toLowerCase()}"><p class="callout-title">${c.icon} ${c.label}</p><p>${rest}</p></div>`;
+		},
+	);
+
+	// Heading ids + anchor links + TOC
 	html = html.replace(/<h([1-6])>([\s\S]*?)<\/h\1>/g, (_m, lvl: string, inner: string) => {
 		const level = Number(lvl);
 		const text = inner.replace(/<[^>]+>/g, "").trim();
@@ -31,7 +50,7 @@ export function renderWithToc(md: string): { html: string; toc: TocItem[] } {
 		while (seen.has(id)) id = `${slugify(text)}-${n++}`;
 		seen.add(id);
 		if (level === 2 || level === 3) toc.push({ level, text, id });
-		return `<h${lvl} id="${id}">${inner}</h${lvl}>`;
+		return `<h${lvl} id="${id}"><a class="anchor" href="#${id}" aria-label="Permalink">#</a>${inner}</h${lvl}>`;
 	});
 	return { html, toc };
 }

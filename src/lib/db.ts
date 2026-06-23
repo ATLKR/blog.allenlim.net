@@ -26,6 +26,7 @@ export interface PostRow {
 	reading_time: number;
 	word_count: number;
 	views: number;
+	reactions: number;
 	featured_media_id: string | null;
 	author_id: string | null;
 	published_at: string | null;

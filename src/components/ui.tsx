@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import type { PostWithTerms } from "#/lib/content";
 import { type Locale, t } from "#/lib/i18n";
 import { logoutFn, viewFn } from "#/lib/server";
+import { BackToTop, CommandPalette, FontSize, Lightbox } from "./reading";
 
 export const SITE = "allenlim.net";
 export const SITE_ORIGIN = "https://blog.allenlim.net";
@@ -195,6 +196,7 @@ export function SiteLayout({ me, children }: { me: Me; children: React.ReactNode
 						<a href="/admin">{me.user ? tr.admin : tr.login}</a>
 					</span>
 					<div className="footer-controls">
+						<FontSize />
 						{(() => {
 							const s = me.settings.social;
 							const links = [
@@ -216,6 +218,9 @@ export function SiteLayout({ me, children }: { me: Me; children: React.ReactNode
 					</div>
 				</div>
 			</footer>
+			<CommandPalette locale={me.locale} />
+			<BackToTop />
+			<Lightbox />
 		</div>
 	);
 }

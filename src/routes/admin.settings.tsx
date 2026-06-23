@@ -49,6 +49,7 @@ function Settings() {
 						</div>
 						<div className="field"><label>Author name</label><input value={s.author_name} onChange={(e) => set("author_name", e.target.value)} /></div>
 					</div>
+					<div className="field"><label>Author bio <span className="hint">(shown in the post author box)</span></label><textarea rows={2} value={s.author_bio} onChange={(e) => set("author_bio", e.target.value)} /></div>
 				</section>
 
 				<section className="side-card">

@@ -42,7 +42,7 @@ export const Route = createRootRoute({
 	shellComponent: RootDocument,
 });
 
-const THEME_INIT = `(function(){try{var m=document.cookie.match(/theme=([^;]+)/);var t=m&&m[1];if(t==='dark'||t==='light'){document.documentElement.classList.add(t)}else if(matchMedia('(prefers-color-scheme: dark)').matches){document.documentElement.classList.add('dark')}}catch(e){}})()`;
+const THEME_INIT = `(function(){try{var c=document.cookie;var m=c.match(/theme=([^;]+)/);var t=m&&m[1];if(t==='dark'||t==='light'){document.documentElement.classList.add(t)}else if(matchMedia('(prefers-color-scheme: dark)').matches){document.documentElement.classList.add('dark')}var f=c.match(/fs=([^;]+)/);if(f&&f[1]==='lg'){document.documentElement.dataset.fs='lg'}}catch(e){}})()`;
 
 function ReadingProgress() {
 	const [w, setW] = useState(0);

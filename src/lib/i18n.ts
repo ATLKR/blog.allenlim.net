@@ -39,6 +39,9 @@ interface Strings {
 	commentsClosed: string;
 	captchaIncomplete: string;
 	commentingAs: string;
+	reply: string;
+	replyingTo: string;
+	cancel: string;
 	notFound: string;
 	notFoundMsg: string;
 	backHome: string;
@@ -79,6 +82,9 @@ const en: Strings = {
 	commentsClosed: "Comments are closed.",
 	captchaIncomplete: "Please complete the captcha.",
 	commentingAs: "Commenting as",
+	reply: "Reply",
+	replyingTo: "Replying to",
+	cancel: "Cancel",
 	notFound: "Page not found",
 	notFoundMsg: "That page doesn't exist, or it's private.",
 	backHome: "← Back home",
@@ -119,6 +125,9 @@ const ko: Strings = {
 	commentsClosed: "댓글이 닫혀 있습니다.",
 	captchaIncomplete: "캡차를 완료해 주세요.",
 	commentingAs: "작성자",
+	reply: "답글",
+	replyingTo: "답글 대상",
+	cancel: "취소",
 	notFound: "페이지를 찾을 수 없습니다",
 	notFoundMsg: "존재하지 않거나 비공개 페이지입니다.",
 	backHome: "← 홈으로",

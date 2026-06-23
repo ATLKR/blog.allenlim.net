@@ -21,6 +21,7 @@ export interface PublicComment {
 	body: string;
 	created_at: string;
 	is_member: boolean;
+	parent_id: string | null;
 }
 
 const RATE_LIMIT = 5; // comments
@@ -57,16 +58,17 @@ export async function verifyTurnstile(env: Env, token: string, ip?: string): Pro
 
 export async function listComments(env: Env, postId: string): Promise<PublicComment[]> {
 	const { results } = await env.DB.prepare(
-		"SELECT id, author_name, body, created_at, user_id FROM comments WHERE post_id = ? AND status = 'published' ORDER BY created_at ASC",
+		"SELECT id, author_name, body, created_at, user_id, parent_id FROM comments WHERE post_id = ? AND status = 'published' ORDER BY created_at ASC",
 	)
 		.bind(postId)
-		.all<{ id: string; author_name: string; body: string; created_at: string; user_id: string | null }>();
+		.all<{ id: string; author_name: string; body: string; created_at: string; user_id: string | null; parent_id: string | null }>();
 	return (results ?? []).map((r) => ({
 		id: r.id,
 		author_name: r.author_name,
 		body: r.body,
 		created_at: r.created_at,
 		is_member: !!r.user_id,
+		parent_id: r.parent_id,
 	}));
 }
 
@@ -77,17 +79,24 @@ export interface AddCommentArgs {
 	body: string;
 	userId?: string | null;
 	ipHash?: string | null;
+	parentId?: string | null;
 }
 
 export async function insertComment(env: Env, a: AddCommentArgs, status = "published"): Promise<PublicComment> {
 	const id = newId();
 	const ts = nowIso();
 	await env.DB.prepare(
-		"INSERT INTO comments (id, post_id, user_id, author_name, author_email, body, status, ip_hash, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
+		"INSERT INTO comments (id, post_id, user_id, author_name, author_email, body, status, ip_hash, parent_id, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
 	)
-		.bind(id, a.postId, a.userId ?? null, a.authorName, a.email ?? null, a.body, status, a.ipHash ?? null, ts)
+		.bind(id, a.postId, a.userId ?? null, a.authorName, a.email ?? null, a.body, status, a.ipHash ?? null, a.parentId ?? null, ts)
 		.run();
-	return { id, author_name: a.authorName, body: a.body, created_at: ts, is_member: !!a.userId };
+	return { id, author_name: a.authorName, body: a.body, created_at: ts, is_member: !!a.userId, parent_id: a.parentId ?? null };
+}
+
+export async function incrementReaction(env: Env, postId: string): Promise<number> {
+	await env.DB.prepare("UPDATE posts SET reactions = reactions + 1 WHERE id = ?").bind(postId).run();
+	const r = await env.DB.prepare("SELECT reactions FROM posts WHERE id = ?").bind(postId).first<{ reactions: number }>();
+	return r?.reactions ?? 0;
 }
 
 // --- admin moderation ---

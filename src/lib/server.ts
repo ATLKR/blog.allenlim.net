@@ -5,6 +5,7 @@ import {
 	checkRate,
 	deleteComment,
 	hashIp,
+	incrementReaction,
 	insertComment,
 	listAllComments,
 	listComments,
@@ -194,6 +195,11 @@ export const getEntryFn = createServerFn({ method: "GET" })
 				ogImage: post.cover_url || settings.default_og_image || null,
 				sameAs,
 			},
+			author: {
+				name: settings.author_name,
+				bio: settings.author_bio,
+				social: { github: settings.social_github, x: settings.social_x, linkedin: settings.social_linkedin, email: settings.social_email },
+			},
 		};
 	});
 
@@ -348,8 +354,22 @@ export const listCommentsFn = createServerFn({ method: "GET" })
 		};
 	});
 
+export const reactFn = createServerFn({ method: "POST" })
+	.validator((d: { id: string }) => d)
+	.handler(async ({ data }) => {
+		const env = getEnv();
+		const ip = getRequestIP({ xForwardedFor: true }) ?? "0.0.0.0";
+		const key = `react:${await hashIp(ip)}:${data.id}`;
+		if (await env.SESSION.get(key)) {
+			const r = await env.DB.prepare("SELECT reactions FROM posts WHERE id = ?").bind(data.id).first<{ reactions: number }>();
+			return { count: r?.reactions ?? 0, already: true as const };
+		}
+		await env.SESSION.put(key, "1", { expirationTtl: 60 * 60 * 24 * 365 });
+		return { count: await incrementReaction(env, data.id), already: false as const };
+	});
+
 export const addCommentFn = createServerFn({ method: "POST" })
-	.validator((d: { postId: string; name: string; email?: string; body: string; token: string }) => d)
+	.validator((d: { postId: string; name: string; email?: string; body: string; token: string; parentId?: string | null }) => d)
 	.handler(async ({ data }) => {
 		const env = getEnv();
 		const settings = await getSettings(env);
@@ -374,10 +394,10 @@ export const addCommentFn = createServerFn({ method: "POST" })
 			if (!(await checkRate(env, ipHash))) return { ok: false, error: "Too many comments — please wait a minute." };
 			if (!data.token || !(await verifyTurnstile(env, data.token, ip)))
 				return { ok: false, error: "Captcha verification failed. Please try again." };
-			const comment = await insertComment(env, { postId: data.postId, authorName: name, email: data.email || null, body, ipHash }, status);
+			const comment = await insertComment(env, { postId: data.postId, authorName: name, email: data.email || null, body, ipHash, parentId: data.parentId ?? null }, status);
 			return hold ? { ok: true, pending: true as const } : { ok: true, comment };
 		}
-		const comment = await insertComment(env, { postId: data.postId, authorName: name, body, userId: user.id });
+		const comment = await insertComment(env, { postId: data.postId, authorName: name, body, userId: user.id, parentId: data.parentId ?? null });
 		return { ok: true, comment };
 	});
 

@@ -7,6 +7,7 @@ export interface SiteSettings {
 	site_tagline: string;
 	default_locale: "en" | "ko";
 	author_name: string;
+	author_bio: string;
 	// SEO / social defaults
 	default_description: string;
 	default_og_image: string;
@@ -27,6 +28,7 @@ export const SETTINGS_DEFAULTS: SiteSettings = {
 	site_tagline: "Engineering notes, projects, and the occasional stray thought.",
 	default_locale: "en",
 	author_name: "Allen Lim",
+	author_bio: "",
 	default_description: "",
 	default_og_image: "",
 	social_github: "",
