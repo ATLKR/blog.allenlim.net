@@ -8,7 +8,7 @@ import { getEntryFn, listCommentsFn } from "#/lib/server";
 export const Route = createFileRoute("/$lang/posts/$slug")({
 	loader: async ({ params }) => {
 		const res = await getEntryFn({ data: { urlSlug: params.slug, locale: params.lang as Locale } });
-		if ("notFound" in res) throw notFound();
+		if ("notFound" in res || res.post.type !== "post") throw notFound();
 		const comments = await listCommentsFn({ data: { postId: res.post.id } });
 		return { ...res, comments };
 	},

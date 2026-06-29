@@ -32,8 +32,9 @@ function wrap(title: string, max = 20): string[] {
 export async function ogResponse(env: Env, url: URL): Promise<Response> {
 	const locale = url.searchParams.get("l") === "ko" ? "ko" : "en";
 	const postsM = url.pathname.match(/^\/og\/posts\/(.+)\.svg$/);
+	const notesM = url.pathname.match(/^\/og\/notes\/(.+)\.svg$/);
 	const pageM = url.pathname.match(/^\/og\/(.+)\.svg$/);
-	const slug = postsM ? decodeURIComponent(postsM[1]) : pageM ? decodeURIComponent(pageM[1]) : null;
+	const slug = postsM ? decodeURIComponent(postsM[1]) : notesM ? decodeURIComponent(notesM[1]) : pageM ? decodeURIComponent(pageM[1]) : null;
 	const entry = slug ? await getEntryByUrlSlug(env, slug, locale) : null;
 
 	const title = entry?.title ?? "allenlim.net";

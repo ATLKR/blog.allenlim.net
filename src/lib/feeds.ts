@@ -37,18 +37,22 @@ export async function rssResponse(env: Env, url: URL): Promise<Response> {
 
 export async function sitemapResponse(env: Env, url: URL): Promise<Response> {
 	const base = url.origin;
-	const [posts, pages] = await Promise.all([
+	const [posts, pages, notes] = await Promise.all([
 		listPosts(env, { type: "post", limit: 1000 }),
 		listPosts(env, { type: "page", limit: 1000 }),
+		listPosts(env, { type: "note", limit: 1000 }),
 	]);
 	const urls = [
 		`<url><loc>${base}/en</loc></url>`,
 		`<url><loc>${base}/ko</loc></url>`,
 		`<url><loc>${base}/en/posts</loc></url>`,
 		`<url><loc>${base}/ko/posts</loc></url>`,
+		`<url><loc>${base}/en/notes</loc></url>`,
+		`<url><loc>${base}/ko/notes</loc></url>`,
 		`<url><loc>${base}/en/tags</loc></url>`,
 		`<url><loc>${base}/ko/tags</loc></url>`,
 		...posts.map((p) => `<url><loc>${base}/${p.locale}/posts/${p.url_slug}</loc><lastmod>${(p.updated_at || "").slice(0, 10)}</lastmod></url>`),
+		...notes.map((p) => `<url><loc>${base}/${p.locale}/notes/${p.url_slug}</loc><lastmod>${(p.updated_at || "").slice(0, 10)}</lastmod></url>`),
 		...pages.map((p) => `<url><loc>${base}/${p.locale}/${p.url_slug}</loc><lastmod>${(p.updated_at || "").slice(0, 10)}</lastmod></url>`),
 	].join("\n");
 	const xml = `<?xml version="1.0" encoding="UTF-8"?>

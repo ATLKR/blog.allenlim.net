@@ -177,6 +177,7 @@ export function SiteLayout({ me, children }: { me: Me; children: React.ReactNode
 						</form>
 						<div className="nav-links">
 							<Link to="/$lang/posts" params={{ lang }} search={{}}>{tr.posts}</Link>
+							<Link to="/$lang/notes" params={{ lang }} search={{}}>{tr.notes}</Link>
 							{me.navPages.map((p) => (
 								<Link key={p.url_slug} to="/$lang/$slug" params={{ lang, slug: p.url_slug }}>{p.title}</Link>
 							))}

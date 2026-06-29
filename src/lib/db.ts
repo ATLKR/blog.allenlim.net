@@ -5,8 +5,8 @@ export const VISIBILITIES: Visibility[] = ["draft", "private", "unlisted", "publ
 /** Reachable at a direct URL by an anonymous visitor (subject to scheduling). */
 export const PUBLICLY_REACHABLE: Visibility[] = ["public", "unlisted"];
 
-export type ContentType = "post" | "page";
-export const CONTENT_TYPES: ContentType[] = ["post", "page"];
+export type ContentType = "post" | "page" | "note";
+export const CONTENT_TYPES: ContentType[] = ["post", "page", "note"];
 
 export interface PostRow {
 	id: string;

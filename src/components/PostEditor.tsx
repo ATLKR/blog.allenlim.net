@@ -146,7 +146,8 @@ export function PostEditor({ existing, body: initialBody, defaults }: { existing
 	}
 
 	async function save() {
-		if (!f.title.trim()) return setMsg("Title is required.");
+		if (!f.title.trim() && f.type !== "note") return setMsg("Title is required.");
+		if (f.type === "note" && !f.body.trim()) return setMsg("Memo is empty.");
 		setSaving(true);
 		setMsg(null);
 		const res = await saveFn({
@@ -195,7 +196,7 @@ export function PostEditor({ existing, body: initialBody, defaults }: { existing
 		>
 			<div className="editor-main">
 				{msg && <div className={`notice${msg === "Saved." ? "" : " error"}`}>{msg}</div>}
-				<input className="title-input" value={f.title} onChange={onTitle} placeholder="Title" aria-label="Title" />
+				<input className="title-input" value={f.title} onChange={onTitle} placeholder={f.type === "note" ? "Title (optional — auto from memo)" : "Title"} aria-label="Title" />
 
 				<div className="md-toolbar">
 					{TOOLBAR.map((b) => (
@@ -233,7 +234,7 @@ export function PostEditor({ existing, body: initialBody, defaults }: { existing
 				<div className="actions">
 					<button type="button" className="btn" disabled={saving} onClick={save}>{saving ? "Saving…" : "Save"}{dirty ? " •" : ""}</button>
 					<span className="muted" style={{ fontSize: ".8rem" }}>⌘/Ctrl+S</span>
-					{existing && <a href={`/${f.locale}/${f.type === "page" ? "" : "posts/"}${f.slug}`} target="_blank" rel="noreferrer" style={{ marginLeft: "auto", fontSize: ".85rem" }}>View ↗</a>}
+					{existing && <a href={`/${f.locale}/${f.type === "page" ? "" : f.type === "note" ? "notes/" : "posts/"}${f.slug}`} target="_blank" rel="noreferrer" style={{ marginLeft: "auto", fontSize: ".85rem" }}>View ↗</a>}
 				</div>
 			</div>
 
@@ -255,7 +256,7 @@ export function PostEditor({ existing, body: initialBody, defaults }: { existing
 				<div className="side-card">
 					<div className="field">
 						<label>Type</label>
-						<select value={f.type} onChange={set("type")}><option value="post">post</option><option value="page">page</option></select>
+						<select value={f.type} onChange={set("type")}><option value="post">post</option><option value="page">page</option><option value="note">note</option></select>
 					</div>
 					<div className="field">
 						<label>Language</label>

@@ -10,6 +10,10 @@ export function resolveLocale(acceptLanguage: string | null | undefined, cookieL
 
 interface Strings {
 	posts: string;
+	notes: string;
+	notesTagline: string;
+	notesCount: (n: number) => string;
+	noNotes: string;
 	tags: string;
 	topics: string;
 	admin: string;
@@ -53,6 +57,10 @@ interface Strings {
 
 const en: Strings = {
 	posts: "Posts",
+	notes: "Notes",
+	notesTagline: "Short notes & memos.",
+	notesCount: (n) => `${n} ${n === 1 ? "note" : "notes"}`,
+	noNotes: "No notes yet.",
 	tags: "Tags",
 	topics: "Topics",
 	admin: "Admin",
@@ -96,6 +104,10 @@ const en: Strings = {
 
 const ko: Strings = {
 	posts: "글",
+	notes: "메모",
+	notesTagline: "짧은 노트와 메모.",
+	notesCount: (n) => `메모 ${n}개`,
+	noNotes: "아직 메모가 없습니다.",
 	tags: "태그",
 	topics: "주제",
 	admin: "관리",

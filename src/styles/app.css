@@ -347,6 +347,19 @@ html[data-fs="lg"] { font-size: 1.15rem; }
 .share button, .share a { font-size: var(--fs-sm); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--color-border); border-radius: var(--radius); background: transparent; color: var(--color-text-secondary); cursor: pointer; }
 .share button:hover, .share a:hover { color: var(--color-text); background: var(--color-surface); }
 
+/* --- notes (short memos) --- */
+.notes-feed { max-width: 44rem; }
+.note-item { padding: var(--sp-6) 0; border-bottom: 1px solid var(--color-border-subtle); }
+.note-item .note-body { font-size: var(--fs-lg); }
+.note-item .note-body > :first-child { margin-top: 0; }
+.note-item .note-body > :last-child { margin-bottom: 0; }
+.note-meta { display: flex; align-items: center; gap: var(--sp-3); margin-top: var(--sp-3); font-size: var(--fs-sm); color: var(--color-muted); }
+.note-meta a { color: var(--color-muted); }
+.note-meta a:hover { color: var(--color-text); }
+.note-react { color: var(--color-danger); }
+.note-page { max-width: 44rem; }
+.note-item.single { padding-top: var(--sp-4); border-bottom: none; }
+
 /* author box */
 .author-box { display: flex; gap: var(--sp-4); margin-top: var(--sp-12); padding: var(--sp-6); background: var(--color-bg-subtle); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-lg); }
 .author-box .avatar { flex: 0 0 48px; width: 48px; height: 48px; border-radius: 50%; background: var(--color-accent); color: #fff; display: grid; place-items: center; font-weight: 700; }

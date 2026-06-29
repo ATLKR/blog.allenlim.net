@@ -44,9 +44,9 @@ import {
 	searchPosts,
 	updatePost,
 } from "./content";
-import { type ContentType, type Visibility, VISIBILITIES, countUsers, getUserByEmail, nowIso } from "./db";
+import { CONTENT_TYPES, type ContentType, type Visibility, VISIBILITIES, countUsers, getUserByEmail, nowIso } from "./db";
 import { getEnv } from "./env";
-import { renderWithToc } from "./markdown";
+import { renderMarkdown, renderWithToc, toPlainText } from "./markdown";
 import { type SiteSettings, getSettings, publicSettings, saveSettings } from "./settings";
 import { getSiteIdentity } from "./site";
 import { newId } from "./slug";
@@ -162,6 +162,22 @@ export const listFn = createServerFn({ method: "GET" })
 			countPosts(env, opts),
 		]);
 		return { posts, total, page, pageSize: PAGE, pages: Math.max(1, Math.ceil(total / PAGE)) };
+	});
+
+const NOTES_PAGE = 20;
+
+export const notesFn = createServerFn({ method: "GET" })
+	.validator((d: { locale: Locale; page?: number }) => d)
+	.handler(async ({ data }) => {
+		const env = getEnv();
+		const page = Math.max(1, data.page ?? 1);
+		const opts = { type: "note" as const, locale: data.locale, pinnedFirst: true };
+		const [rows, total] = await Promise.all([
+			listPosts(env, { ...opts, limit: NOTES_PAGE, offset: (page - 1) * NOTES_PAGE }),
+			countPosts(env, opts),
+		]);
+		const notes = await Promise.all(rows.map(async (p) => ({ post: p, html: renderMarkdown(await loadBody(env, p)) })));
+		return { notes, page, total, pages: Math.max(1, Math.ceil(total / NOTES_PAGE)) };
 	});
 
 export const getEntryFn = createServerFn({ method: "GET" })
@@ -310,13 +326,17 @@ export const saveFn = createServerFn({ method: "POST" })
 	.handler(async ({ data }) => {
 		const user = await requireUser();
 		const env = getEnv();
-		if (!data.title.trim()) return { ok: false, error: "Title required." };
+		const type: ContentType = CONTENT_TYPES.includes(data.type as ContentType) ? (data.type as ContentType) : "post";
+		// Notes are title-optional: derive a short title from the body when omitted.
+		let title = data.title.trim();
+		if (!title && type === "note") title = toPlainText(data.body ?? "").trim().slice(0, 80);
+		if (!title) return { ok: false, error: type === "note" ? "Memo is empty." : "Title required." };
 		const input: PostInput = {
-			title: data.title.trim(),
+			title,
 			slug: data.slug?.trim() || undefined,
 			excerpt: (data.excerpt?.trim() || null) as string | null,
 			visibility: (VISIBILITIES.includes(data.visibility as Visibility) ? data.visibility : "draft") as Visibility,
-			type: data.type === "page" ? "page" : "post",
+			type,
 			pinned: !!data.pinned,
 			cover_url: data.cover_url?.trim() || null,
 			publishedAt: data.publishedAt ?? undefined,

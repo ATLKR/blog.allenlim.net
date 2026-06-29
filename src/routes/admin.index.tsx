@@ -40,6 +40,7 @@ function group(posts: PostWithTerms[]): Group[] {
 const FILTERS = [
 	{ key: "all", label: "All" },
 	{ key: "post", label: "Posts" },
+	{ key: "note", label: "Notes" },
 	{ key: "page", label: "Pages" },
 	{ key: "public", label: "Published" },
 	{ key: "draft", label: "Drafts" },
@@ -48,7 +49,7 @@ type FilterKey = (typeof FILTERS)[number]["key"];
 
 function matches(g: Group, f: FilterKey): boolean {
 	if (f === "all") return true;
-	if (f === "post" || f === "page") return g.rep.type === f;
+	if (f === "post" || f === "page" || f === "note") return g.rep.type === f;
 	return [...g.byLocale.values()].some((e) => e.visibility === f);
 }
 
