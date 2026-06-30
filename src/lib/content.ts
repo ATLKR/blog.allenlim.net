@@ -318,10 +318,11 @@ export async function updatePost(env: Env, id: string, input: PostInput): Promis
 				? existing.published_at ?? ts
 				: existing.published_at;
 	const locale = input.locale ?? existing.locale;
-	const group =
-		input.translationOf !== undefined
-			? await resolveGroup(env, input.translationOf, id)
-			: existing.translation_group ?? id;
+	// A non-empty translationOf (re)links to a group; empty/undefined preserves the
+	// current group so editing a translation never silently detaches it.
+	const group = input.translationOf
+		? await resolveGroup(env, input.translationOf, id)
+		: existing.translation_group ?? id;
 	const urlSlug = input.translationOf
 		? await resolveUrlSlug(env, input.translationOf, input.slug || input.title, locale, id)
 		: await uniqueUrlSlug(env, input.slug || input.title, locale, id);

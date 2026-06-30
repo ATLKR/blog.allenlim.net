@@ -301,7 +301,12 @@ export const getEditFn = createServerFn({ method: "GET" })
 		const env = getEnv();
 		const post = await getPostMetaById(env, data.id);
 		if (!post) return { notFound: true as const };
-		return { post, body: await loadBody(env, post) };
+		// Find a sibling translation (shares the group) so the editor can pre-fill
+		// "Translation Of" — saving then keeps the link instead of detaching.
+		const sib = await env.DB.prepare("SELECT slug FROM posts WHERE translation_group = ? AND id != ? LIMIT 1")
+			.bind(post.translation_group ?? post.id, post.id)
+			.first<{ slug: string }>();
+		return { post, body: await loadBody(env, post), translationOf: sib?.slug ?? null };
 	});
 
 interface SaveInput {

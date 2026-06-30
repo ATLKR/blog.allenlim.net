@@ -17,14 +17,14 @@ export const Route = createFileRoute("/admin/posts/$id")({
 
 function EditPost() {
 	const { me } = Route.useRouteContext();
-	const { post, body } = Route.useLoaderData();
+	const { post, body, translationOf } = Route.useLoaderData();
 	return (
 		<AdminShell email={me.user?.email}>
 			<div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "1.5rem" }}>
 				<h1 style={{ fontSize: "1.5rem" }}>Edit entry</h1>
 				<a href={`/${post.locale}/${post.type === "page" ? "" : "posts/"}${post.url_slug}`} target="_blank" rel="noreferrer" style={{ fontSize: ".85rem" }}>View ↗</a>
 			</div>
-			<PostEditor existing={post} body={body} />
+			<PostEditor existing={post} body={body} defaults={translationOf ? { translationOf } : undefined} />
 		</AdminShell>
 	);
 }
